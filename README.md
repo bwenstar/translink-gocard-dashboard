@@ -25,15 +25,31 @@ are gitignored.
 - **Route paths and route numbers**: each trip is matched against Translink's timetable to find
   the service you most likely caught. The map draws its real path along the roads, busway, rail
   line or river, and the trip table shows the route number.
+- **Every mode**: bus, train, ferry (CityCat and cross-river) and light rail (G:link) are detected,
+  coloured and filterable. A mode you haven't used yet still shows up, with zero trips.
 - **Static dashboard**: open `dashboard/index.html` straight from disk. There's no server and no
   build tooling, and it supports light and dark mode.
-  - KPIs: journeys, legs, fares, time on board, travel days, failed touch-offs, top-ups
-  - map of stops and trips along their actual route paths, with a straight-line toggle
-    (click a stop to filter)
-  - trips-per-day calendar, weekday × hour heatmap, weekly/monthly trip counts
-  - top routes, trip-duration histogram, card balance over time with top-ups
-  - sortable trip table with the likely route number (click a row to show that journey on the map)
-  - filters for date range, presets, weekdays and stop
+  - KPIs: journeys, fares, distance travelled, time on board, days travelled, longest daily
+    streak, busiest day, routes used, failed touch-offs, top-ups
+  - **map**:
+    - trips drawn along their real route path, coloured by mode and sized by use
+    - an optional layer showing the whole rail and ferry network
+    - a mode legend, a straight-line toggle and a "fit to trips" button
+    - click a line or stop to filter
+  - **charts**:
+    - trips-per-day calendar, weekday × hour heatmap, weekly/monthly trips
+    - legs by mode, top route numbers, top stop pairs, most used stops
+    - trip durations, spending per month, card balance with top-ups
+  - **filters**:
+    - date range and presets, weekdays, mode, route number, time of day
+    - trip type (with a transfer, failed touch-off, no route match, unverified stop)
+    - stop, and a free-text search
+  - **every chart is clickable**: a heatmap cell filters to that weekday and hour, a bar zooms
+    to that week or month, and a route, stop or stop pair filters to it. Active filters show as
+    removable chips.
+  - filters are saved in the URL, so a filtered view can be bookmarked
+  - a sortable trip table with mode, route, distance and fare. Click a row to show that journey
+    on the map. **Download CSV** exports exactly the trips you've filtered to.
 
 ## Requirements
 
@@ -186,8 +202,16 @@ time on the same weekday. That trip's shape (`shapes.txt`) is cut between the tw
 simplified. The first build takes about 10 seconds. Results are cached in
 `data/gtfs/paths_cache.json`, so later builds take under a second until the feed or your stops change.
 
+**Modes.** Each leg takes the mode of its matched GTFS route (bus 3, rail 2, ferry 4, light rail 0).
+Unmatched legs fall back to the stops: ferry terminals and train stations are recognised from
+their GTFS ids and names. Rail replacement buses in the timetable are ignored. A bus match between
+two train stations is only accepted if no train fits. The network layer is one shape per rail,
+ferry and light rail route, simplified to about 25 m.
+
 **Dashboard.** Plain HTML, CSS and JS with hand-drawn SVG charts and [Leaflet](https://leafletjs.com)
-for the map. Map tiles are Esri World Gray Canvas, which needs no API key and works from `file://`.
+for the map. Modes use three colour-blind-checked colours (bus blue, rail orange, ferry aqua).
+Light rail shares the rail colour with a dashed line, because a fourth colour can't be told apart
+reliably. Map tiles are Esri World Gray Canvas, which needs no API key and works from `file://`.
 
 ## Privacy
 

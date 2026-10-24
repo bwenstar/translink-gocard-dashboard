@@ -79,7 +79,16 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] Stop geocoding: fuzzy match go card labels to GTFS stops, store in `stops.json`, flag guesses
 - [x] Dashboard: KPIs, filters, map (stops and routes), calendar, time-of-day by weekday heatmap,
       weekly trips, balance over time, top routes, trip-duration histogram, full trip table
-- [ ] Ideas: compare cost against the old fare or a monthly pass, CO₂ vs. driving, "streaks"
+- [x] Interactive v2:
+  - modes (bus/train/ferry/light rail, colour per mode, shown even with 0 trips)
+  - rail & ferry network layer, map legend, fit-to-trips
+  - filters for mode, route, time of day, trip type and search; removable filter chips; filters
+    stored in the URL hash
+  - clickable heatmap, bars, route/stop/pair lists and map lines
+  - new KPIs: distance, longest streak, busiest day, routes used
+  - new charts: by mode, top route numbers, most used stops, spending per month
+  - CSV export of the filtered trips
+- [ ] Ideas: compare cost against a pre-50c-fare world or by driving, CO₂ vs. driving, replay animation
 
 ### Phase 2 — automated retrieval  ✅
 - [x] Inspect the site: login form, export URL, 6-month limit (see "How the site works")

@@ -16,19 +16,42 @@
 </header>
 
 <section class="filters" aria-label="Filters">
-  <div class="presets" role="group" aria-label="Date range">
-    <button data-preset="all" class="on">All</button>
-    <button data-preset="30">Last 30 days</button>
-    <button data-preset="90">Last 90 days</button>
-    <button data-preset="month">This month</button>
-    <button data-preset="year">This year</button>
-    <button data-preset="365">Last 12 months</button>
+  <div class="filter-row">
+    <div class="presets" role="group" aria-label="Date range">
+      <button data-preset="all" class="on">All</button>
+      <button data-preset="30">Last 30 days</button>
+      <button data-preset="90">Last 90 days</button>
+      <button data-preset="month">This month</button>
+      <button data-preset="year">This year</button>
+      <button data-preset="365">Last 12 months</button>
+    </div>
+    <label>From <input type="date" id="from"></label>
+    <label>To <input type="date" id="to"></label>
+    <div class="days" role="group" aria-label="Weekdays"></div>
   </div>
-  <label>From <input type="date" id="from"></label>
-  <label>To <input type="date" id="to"></label>
-  <div class="days" role="group" aria-label="Weekdays"></div>
-  <label>Stop <select id="stop"><option value="">Any stop</option></select></label>
-  <button id="reset" class="ghost">Reset</button>
+  <div class="filter-row">
+    <div class="modes" role="group" aria-label="Mode"></div>
+    <label>Route <select id="route"><option value="">Any route</option></select></label>
+    <label>Time <select id="hours">
+      <option value="">Any time</option>
+      <option value="0-6">Before 6am</option>
+      <option value="6-9">Morning peak (6–9am)</option>
+      <option value="9-15">Daytime (9am–3pm)</option>
+      <option value="15-19">Afternoon peak (3–7pm)</option>
+      <option value="19-24">Evening (after 7pm)</option>
+    </select></label>
+    <label>Trips <select id="kind">
+      <option value="">All trips</option>
+      <option value="transfer">Journeys with a transfer</option>
+      <option value="failed">Failed touch-offs</option>
+      <option value="unmatched">No route match</option>
+      <option value="unverified">Unverified stops</option>
+    </select></label>
+    <label>Stop <select id="stop"><option value="">Any stop</option></select></label>
+    <label class="search">Search <input type="search" id="q" placeholder="stop or route" autocomplete="off"></label>
+    <button id="reset" class="ghost">Reset</button>
+  </div>
+  <div class="active" id="active" aria-live="polite"></div>
 </section>
 
 <main>
@@ -36,8 +59,12 @@
 
   <section class="grid">
     <article class="card span-2">
-      <header class="row"><div><h2>Where you travel</h2><p class="muted">Stops sized by tap-ons + tap-offs, lines by trips along them. Paths follow the likely route from the current timetable; dashed lines had no match. Click a stop to filter.</p></div>
-        <label class="toggle"><input type="checkbox" id="straight"> Straight lines</label></header>
+      <header class="row"><div><h2>Where you travel</h2><p class="muted">Lines follow the likely route, coloured by mode and sized by trips. Dotted lines had no timetable match. Click a line or stop to filter.</p></div>
+        <div class="map-opts">
+          <label class="toggle"><input type="checkbox" id="network" checked> Rail &amp; ferry network</label>
+          <label class="toggle"><input type="checkbox" id="straight"> Straight lines</label>
+          <button id="fit" class="ghost">Fit to trips</button>
+        </div></header>
       <div id="map"></div>
     </article>
 
@@ -47,23 +74,43 @@
     </article>
 
     <article class="card">
-      <header><h2>When you tap on</h2><p class="muted">Trips by weekday and hour</p></header>
+      <header><h2>When you tap on</h2><p class="muted">Trips by weekday and hour. Click a cell to filter.</p></header>
       <div id="heatmap" class="chart"></div>
     </article>
 
     <article class="card">
-      <header><h2 id="weeklyTitle">Trips per week</h2><p class="muted">Legs, including transfers</p></header>
+      <header><h2 id="weeklyTitle">Trips per week</h2><p class="muted">Legs, including transfers. Click a bar to zoom in.</p></header>
       <div id="weekly" class="chart"></div>
     </article>
 
     <article class="card">
-      <header><h2>Top routes</h2><p class="muted">Trips between a stop pair, both directions</p></header>
+      <header><h2>By mode</h2><p class="muted">Legs by bus, train, ferry and light rail. Click to filter.</p></header>
+      <div id="modes" class="chart"></div>
+    </article>
+
+    <article class="card">
+      <header><h2>Top route numbers</h2><p class="muted">Likely route, from the current timetable. Click to filter.</p></header>
+      <div id="routeNums" class="chart"></div>
+    </article>
+
+    <article class="card">
+      <header><h2>Top stop pairs</h2><p class="muted">Trips between two stops, both directions. Click to filter.</p></header>
       <div id="routes" class="chart"></div>
     </article>
 
     <article class="card">
-      <header><h2>Time on board</h2><p class="muted">Leg duration, minutes</p></header>
+      <header><h2>Most used stops</h2><p class="muted">Tap-ons + tap-offs. Click to filter.</p></header>
+      <div id="stopsChart" class="chart"></div>
+    </article>
+
+    <article class="card">
+      <header><h2>Time on board</h2><p class="muted">Leg duration, minutes. Click a bar to filter.</p></header>
       <div id="durations" class="chart"></div>
+    </article>
+
+    <article class="card">
+      <header><h2>Spending per month</h2><p class="muted">Fares paid, including penalty fares</p></header>
+      <div id="spend" class="chart"></div>
     </article>
 
     <article class="card span-2">
@@ -72,12 +119,13 @@
     </article>
 
     <article class="card span-2">
-      <header class="row"><div><h2>All trips</h2><p class="muted" id="tableNote"></p></div></header>
+      <header class="row"><div><h2>All trips</h2><p class="muted" id="tableNote"></p></div>
+        <button id="csv">Download CSV</button></header>
       <div class="table-wrap"><table id="trips">
         <thead><tr>
-          <th data-k="on">Date</th><th data-k="onT">On</th><th data-k="offT">Off</th><th data-k="route">Route</th>
+          <th data-k="on">Date</th><th data-k="onT">On</th><th data-k="offT">Off</th><th data-k="mode">Mode</th><th data-k="route">Route</th>
           <th data-k="from">From</th><th data-k="to">To</th>
-          <th data-k="mins" class="num">Mins</th><th data-k="fare" class="num">Fare</th><th data-k="balance" class="num">Balance</th>
+          <th data-k="mins" class="num">Mins</th><th data-k="km" class="num">km</th><th data-k="fare" class="num">Fare</th><th data-k="balance" class="num">Balance</th>
         </tr></thead>
         <tbody></tbody>
       </table></div>

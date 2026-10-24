@@ -119,6 +119,19 @@ def guess_stop(name, gtfs, known=()):
     return best, round(best_score, 2)
 
 
+def stop_mode(g):
+    """Best guess at a GTFS stop's mode from its id, parent station and name."""
+    ids = f'{g["stop_id"]} {g.get("parent_station", "")}'.lower()
+    name = g["stop_name"].lower()
+    if "ferry terminal" in name or re.search(r"place_\w*ft\b", ids):
+        return "ferry"
+    if "light rail" in name:
+        return "tram"
+    if re.search(r"place_\w*(sta|stn)\b", ids) and "bus" not in name:
+        return "train"
+    return "bus"
+
+
 def coords(r):
     return float(r["stop_lat"]), float(r["stop_lon"])
 
@@ -232,18 +245,43 @@ def main():
     if missing:
         print("No coordinates for:", ", ".join(missing))
 
-    paths = {}
+    paths, net = {}, {}
     if args.gtfs_zip.exists():
         name_to_stop = {n: s["stop_id"] for n, s in stops.items()}
-        paths, st = routes.infer(legs, name_to_stop, gtfs, args.gtfs_zip, args.gtfs_zip.parent / "paths_cache.json")
+        cache = args.gtfs_zip.parent / "paths_cache.json"
+        expect = {n: stop_mode(gtfs[sid]) for n, sid in name_to_stop.items()}
+        paths, st = routes.infer(legs, name_to_stop, gtfs, args.gtfs_zip, cache, expect)
+        net = routes.network(args.gtfs_zip, cache)
         print(f"Route paths: {st['legs']} of {len(legs)} legs, {len(st['unmatched'])} of {st['pairs']} stop pairs "
               f"had no timetabled trip (drawn as straight lines)")
     else:
         print(f"No {args.gtfs_zip} - run scripts/fetch_gtfs.py to draw route paths instead of straight lines")
 
+    # Mode of each stop: what its matched legs used, else a guess from the GTFS stop.
+    seen_modes = {}
+    for l in legs:
+        for n in (l["from"], l["to"]):
+            if n and l.get("mode"):
+                seen_modes.setdefault(n, {}).setdefault(l["mode"], 0)
+                seen_modes[n][l["mode"]] += 1
+    for n, s in stops.items():
+        m = seen_modes.get(n)
+        s["mode"] = max(m, key=m.get) if m else stop_mode(gtfs[s["stop_id"]])
+    for l in legs:
+        if not l.get("mode"):  # no timetable match: guess from the stops
+            ms = [stops[n]["mode"] for n in (l["from"], l["to"]) if n in stops]
+            l["mode"] = ms[0] if ms else "bus"
+        # distance along the route path, else the straight line between the stops
+        if l.get("path"):
+            pts = paths[l["path"]]
+            l["km"] = round(sum(km(pts[i], pts[i + 1]) for i in range(len(pts) - 1)), 2)
+        elif l["from"] in stops and l["to"] in stops:
+            a, b = stops[l["from"]], stops[l["to"]]
+            l["km"], l["kmApprox"] = round(km((a["lat"], a["lon"]), (b["lat"], b["lon"])), 2), True
+
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
-        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "legs": legs, "topups": topups,
+        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "network": net, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("window.TRAVEL = " + json.dumps(payload, ensure_ascii=False) + ";\n")

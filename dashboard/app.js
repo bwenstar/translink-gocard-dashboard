@@ -13,6 +13,8 @@
   const SVGNS = "http://www.w3.org/2000/svg";
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MODES = ["bus", "train", "ferry", "tram"];
+  const MODE_LABEL = { bus: "Bus", train: "Train", ferry: "Ferry", tram: "Light rail" };
 
   function el(tag, attrs = {}, ...kids) {
     const n = document.createElement(tag);
@@ -34,6 +36,8 @@
   }
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const seqRamp = () => css("--seq").split(",").map((s) => s.trim());
+  // light rail shares the rail colour (with a dash) - past three hues modes stop being distinguishable
+  const modeColor = (m) => css(`--m-${m === "tram" ? "train" : m || "bus"}`);
   const money = (v) => (v == null ? "" : (v < 0 ? "-$" : "$") + Math.abs(v).toFixed(2));
   const parse = (iso) => {
     const [d, t = "00:00"] = iso.split("T");
@@ -51,24 +55,56 @@
   const onTime = (l) => (l.timeUnknown ? "?" : hm(l.onD));
   const TOPUP_LABEL = { auto: "auto top-up", manual: "top-up", adjustment: "adjustment" };
   const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
+  const short = (n, max = 28) => (n.length > max ? n.slice(0, max - 1) + "…" : n);
+  // train route codes (FGBN) mean little; show the line name instead
+  const routeLabel = (l) => (l.mode === "train" && l.routeName ? l.routeName : l.route || "");
+  const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? "" : "s"}`;
+  const fmtKm = (v) => (v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1));
 
   // ---------- data ----------
-  const legs = D.legs.map((l, i) => ({ ...l, i, onD: parse(l.on), offD: l.off ? parse(l.off) : null }));
+  const legs = D.legs.map((l, i) => ({ ...l, i, onD: parse(l.on), offD: l.off ? parse(l.off) : null, mode: l.mode || "bus" }));
   const topups = D.topups.map((t) => ({ ...t, d: parse(t.t) }));
   const stops = D.stops;
   const minDate = legs.length ? ymd(legs[0].onD) : "";
   const maxDate = legs.length ? ymd(legs[legs.length - 1].onD) : "";
+  const journeyHasTransfer = new Set(legs.filter((l) => l.transfer).map((l) => l.journey));
+  const routeKey = (l) => (l.route ? `${l.mode}:${l.route}` : "");
+  const routeInfo = new Map(); // routeKey -> {mode, route, name, n}
+  legs.forEach((l) => {
+    const k = routeKey(l);
+    if (!k) return;
+    const r = routeInfo.get(k) || { mode: l.mode, route: l.route, name: l.routeName, label: routeLabel(l), n: 0 };
+    r.n++;
+    routeInfo.set(k, r);
+  });
 
   // ---------- state & filters ----------
-  const state = { from: minDate, to: maxDate, days: new Set([0, 1, 2, 3, 4, 5, 6]), stop: "", selJourney: null, sort: { k: "on", asc: false } };
+  const fresh = () => ({
+    from: minDate, to: maxDate, days: new Set([0, 1, 2, 3, 4, 5, 6]), modes: new Set(MODES),
+    route: "", hours: "", kind: "", stop: "", pair: "", q: "", dur: "",
+  });
+  const state = { ...fresh(), selJourney: null, sort: { k: "on", asc: false } };
 
-  function filtered() {
+  function filtered({ ignore } = {}) {
+    const q = state.q.trim().toLowerCase();
+    const [h0, h1] = state.hours ? state.hours.split("-").map(Number) : [0, 24];
+    const [d0, d1] = state.dur ? state.dur.split("-").map(Number) : [0, Infinity];
     return legs.filter((l) => {
       const d = ymd(l.onD);
       if (state.from && d < state.from) return false;
       if (state.to && d > state.to) return false;
       if (!state.days.has(weekday(l.onD))) return false;
+      if (ignore !== "modes" && !state.modes.has(l.mode)) return false;
+      if (state.route && routeKey(l) !== state.route) return false;
+      if (state.hours && (l.timeUnknown || l.onD.getHours() < h0 || l.onD.getHours() >= h1)) return false;
       if (state.stop && l.from !== state.stop && l.to !== state.stop) return false;
+      if (state.pair && (!l.from || !l.to || pairKey(l.from, l.to) !== state.pair)) return false;
+      if (state.dur && (l.mins == null || l.mins < d0 || l.mins >= d1)) return false;
+      if (state.kind === "transfer" && !journeyHasTransfer.has(l.journey)) return false;
+      if (state.kind === "failed" && !l.failedTouchOff) return false;
+      if (state.kind === "unmatched" && l.path) return false;
+      if (state.kind === "unverified" && !(stops[l.from]?.auto || stops[l.to]?.auto)) return false;
+      if (q && ![l.from, l.to, l.route, l.routeName, MODE_LABEL[l.mode]].some((v) => v && v.toLowerCase().includes(q))) return false;
       return true;
     });
   }
@@ -76,44 +112,134 @@
   function setupFilters() {
     $("#from").min = $("#to").min = minDate;
     $("#from").max = $("#to").max = maxDate;
-    const dayBox = $(".days");
     DAYS.forEach((name, i) => {
-      const b = el("button", { class: "on", "aria-pressed": "true", text: name });
-      b.onclick = () => {
-        state.days.has(i) ? state.days.delete(i) : state.days.add(i);
-        b.classList.toggle("on", state.days.has(i));
-        b.setAttribute("aria-pressed", state.days.has(i));
-        render();
+      const b = el("button", { text: name, "data-day": i });
+      b.onclick = () => { state.days.has(i) ? state.days.delete(i) : state.days.add(i); render(); };
+      $(".days").append(b);
+    });
+    const modeCount = Object.fromEntries(MODES.map((m) => [m, legs.filter((l) => l.mode === m).length]));
+    MODES.forEach((m) => {
+      const b = el("button", { class: "mode", "data-mode": m, title: modeCount[m] ? "" : `No ${MODE_LABEL[m].toLowerCase()} trips yet` },
+        el("i", { class: `swatch ${m}` }), `${MODE_LABEL[m]} `, el("span", { class: "count", text: modeCount[m] }));
+      b.onclick = (e) => {
+        // click toggles; alt/ctrl/cmd-click shows only this mode
+        if (e.altKey || e.metaKey || e.ctrlKey) state.modes = new Set([m]);
+        else state.modes.has(m) ? state.modes.delete(m) : state.modes.add(m);
+        render({ fit: true });
       };
-      dayBox.append(b);
+      $(".modes").append(b);
+    });
+    // routes grouped by mode, busiest first
+    MODES.forEach((m) => {
+      const list = [...routeInfo.entries()].filter(([, r]) => r.mode === m).sort((a, b) => b[1].n - a[1].n);
+      if (!list.length) return;
+      const g = el("optgroup", { label: MODE_LABEL[m] });
+      list.forEach(([k, r]) => g.append(el("option", { value: k, text: `${r.mode === "train" ? r.name || r.route : r.route} (${r.n})` })));
+      $("#route").append(g);
     });
     const counts = {};
     legs.forEach((l) => { [l.from, l.to].forEach((n) => { if (n) counts[n] = (counts[n] || 0) + 1; }); });
     Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([n, c]) => $("#stop").append(el("option", { value: n, text: `${n} (${c})` })));
-    $("#stop").onchange = (e) => { state.stop = e.target.value; render(); };
+
+    $("#route").onchange = (e) => { state.route = e.target.value; render({ fit: true }); };
+    $("#hours").onchange = (e) => { state.hours = e.target.value; render(); };
+    $("#kind").onchange = (e) => { state.kind = e.target.value; render({ fit: true }); };
+    $("#stop").onchange = (e) => { state.stop = e.target.value; render({ fit: true }); };
+    let qt;
+    $("#q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; render(); }, 200); };
     $("#straight").onchange = () => renderMap(filtered());
+    $("#network").onchange = () => renderNetwork();
+    $("#fit").onclick = () => fitTo(filtered());
     if (!D.paths || !Object.keys(D.paths).length) $("#straight").parentElement.hidden = true;
-    $("#from").onchange = (e) => { state.from = e.target.value || minDate; markPreset(null); render(); };
-    $("#to").onchange = (e) => { state.to = e.target.value || maxDate; markPreset(null); render(); };
+    if (!D.network || !Object.keys(D.network).length) $("#network").parentElement.hidden = true;
+    $("#from").onchange = (e) => { state.from = e.target.value || minDate; render(); };
+    $("#to").onchange = (e) => { state.to = e.target.value || maxDate; render(); };
     document.querySelectorAll("[data-preset]").forEach((b) => (b.onclick = () => applyPreset(b.dataset.preset)));
-    $("#reset").onclick = () => {
-      state.days = new Set([0, 1, 2, 3, 4, 5, 6]);
-      dayBox.querySelectorAll("button").forEach((b) => { b.classList.add("on"); b.setAttribute("aria-pressed", "true"); });
-      state.stop = ""; $("#stop").value = ""; state.selJourney = null;
-      applyPreset("all");
+    $("#reset").onclick = () => { Object.assign(state, fresh(), { selJourney: null }); render({ fit: true }); };
+    $("#csv").onclick = downloadCsv;
+  }
+
+  // Reflect state in every control (used after clicks on charts and when restoring from the URL).
+  function syncControls() {
+    $("#from").value = state.from; $("#to").value = state.to;
+    document.querySelectorAll("[data-day]").forEach((b) => {
+      const on = state.days.has(Number(b.dataset.day));
+      b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+    });
+    document.querySelectorAll("[data-mode]").forEach((b) => {
+      const on = state.modes.has(b.dataset.mode);
+      b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+    });
+    let opt = $("#hours").querySelector("option[data-custom]");
+    if (state.hours && ![...$("#hours").options].some((o) => o.value === state.hours && !o.dataset.custom)) {
+      if (!opt) { opt = el("option", { "data-custom": "1" }); $("#hours").append(opt); }
+      const [a, b] = state.hours.split("-").map(Number);
+      opt.value = state.hours; opt.textContent = `${String(a).padStart(2, "0")}:00–${String(b - 1).padStart(2, "0")}:59`;
+    } else if (opt) opt.remove();
+    $("#hours").value = state.hours; $("#route").value = state.route; $("#kind").value = state.kind; $("#stop").value = state.stop;
+    if (document.activeElement !== $("#q")) $("#q").value = state.q;
+    markPreset();
+  }
+  function markPreset() {
+    const p = presetRange();
+    document.querySelectorAll("[data-preset]").forEach((b) => {
+      const r = p[b.dataset.preset];
+      b.classList.toggle("on", r[0] === state.from && r[1] === state.to);
+    });
+  }
+  function presetRange() {
+    const today = new Date(), t = ymd(today);
+    const back = (n) => { const f = new Date(today); f.setDate(f.getDate() - n + 1); return ymd(f); };
+    return {
+      all: [minDate, maxDate], 30: [back(30), t], 90: [back(90), t], 365: [back(365), t],
+      month: [ymd(new Date(today.getFullYear(), today.getMonth(), 1)), t], year: [ymd(new Date(today.getFullYear(), 0, 1)), t],
     };
   }
-  function markPreset(p) { document.querySelectorAll("[data-preset]").forEach((b) => b.classList.toggle("on", b.dataset.preset === p)); }
-  function applyPreset(p) {
-    const today = new Date();
-    if (p === "all") { state.from = minDate; state.to = maxDate; }
-    else if (p === "month") { state.from = ymd(new Date(today.getFullYear(), today.getMonth(), 1)); state.to = ymd(today); }
-    else if (p === "year") { state.from = ymd(new Date(today.getFullYear(), 0, 1)); state.to = ymd(today); }
-    else { const f = new Date(today); f.setDate(f.getDate() - Number(p) + 1); state.from = ymd(f); state.to = ymd(today); }
-    markPreset(p);
-    render();
+  function applyPreset(p) { [state.from, state.to] = presetRange()[p]; render(); }
+  function setDay(d) { state.from = state.to = d; render(); }
+  const toggle = (key, value, opts) => { state[key] = state[key] === value ? "" : value; render(opts); };
+
+  // Active filters as removable chips, plus how many legs they leave.
+  function renderActive(rows) {
+    const f = fresh(), chips = [], clears = [];
+    const chip = (label, clear) => {
+      chips.push(el("button", { class: "chip", title: "Remove filter" }, label, el("span", { "aria-hidden": "true", text: " ✕" })));
+      clears.push(clear);
+    };
+    if (state.from !== f.from || state.to !== f.to) chip(state.from === state.to ? fmtDate(parse(state.from)) : `${state.from} → ${state.to}`, () => { state.from = f.from; state.to = f.to; });
+    if (state.days.size < 7) chip(`Days: ${[...state.days].sort().map((d) => DAYS[d]).join(", ") || "none"}`, () => (state.days = f.days));
+    if (state.modes.size < MODES.length) chip(`Mode: ${MODES.filter((m) => state.modes.has(m)).map((m) => MODE_LABEL[m]).join(", ") || "none"}`, () => (state.modes = f.modes));
+    if (state.route) chip(`Route ${routeInfo.get(state.route)?.label || state.route}`, () => (state.route = ""));
+    if (state.hours) chip(`Time ${$("#hours").selectedOptions[0]?.textContent || state.hours}`, () => (state.hours = ""));
+    if (state.kind) chip($("#kind").selectedOptions[0]?.textContent || state.kind, () => (state.kind = ""));
+    if (state.stop) chip(`Stop: ${short(state.stop, 36)}`, () => (state.stop = ""));
+    if (state.pair) chip(`Between ${state.pair.split("\u0000").map((s) => short(s, 24)).join(" ↔ ")}`, () => (state.pair = ""));
+    if (state.dur) chip(`${state.dur.replace("-", "–")} min on board`, () => (state.dur = ""));
+    if (state.q.trim()) chip(`“${state.q.trim()}”`, () => (state.q = ""));
+    chips.forEach((c, i) => (c.onclick = () => { clears[i](); render({ fit: true }); }));
+    const n = el("span", { class: "muted", text: chips.length ? `${plural(rows.length, "leg")} of ${legs.length.toLocaleString()} ·` : `All ${plural(legs.length, "leg")}` });
+    $("#active").replaceChildren(n, ...chips);
   }
-  function setDay(d) { state.from = state.to = d; markPreset(null); render(); }
+
+  // Filters live in the URL hash so a view can be bookmarked or shared.
+  function writeHash() {
+    const f = fresh(), p = new URLSearchParams();
+    if (state.from !== f.from) p.set("from", state.from);
+    if (state.to !== f.to) p.set("to", state.to);
+    if (state.days.size < 7) p.set("days", [...state.days].sort().join(""));
+    if (state.modes.size < MODES.length) p.set("modes", [...state.modes].join(","));
+    for (const k of ["route", "hours", "kind", "stop", "pair", "q", "dur"]) if (state[k]) p.set(k, state[k]);
+    const h = p.toString();
+    history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
+  }
+  function readHash() {
+    const p = new URLSearchParams(location.hash.slice(1));
+    if (p.has("from")) state.from = p.get("from");
+    if (p.has("to")) state.to = p.get("to");
+    if (p.has("days")) state.days = new Set([...p.get("days")].map(Number));
+    if (p.has("modes")) state.modes = new Set(p.get("modes").split(",").filter((m) => MODES.includes(m)));
+    for (const k of ["route", "hours", "kind", "stop", "pair", "q", "dur"]) if (p.has(k)) state[k] = p.get(k);
+  }
 
   // ---------- tooltip ----------
   const tip = $("#tip");
@@ -135,39 +261,68 @@
     tip.style.top = `${Math.max(8, y)}px`;
   }
   const hideTip = () => (tip.hidden = true);
-  function hoverable(node, fn) {
+  function hoverable(node, fn, onClick) {
     node.addEventListener("pointermove", (e) => { node.classList.add("hover"); fn(e); });
     node.addEventListener("pointerleave", () => { node.classList.remove("hover"); hideTip(); });
     node.setAttribute("tabindex", "0");
     node.addEventListener("focus", () => { const r = node.getBoundingClientRect(); fn({ clientX: r.right, clientY: r.top }); });
     node.addEventListener("blur", hideTip);
+    if (onClick) {
+      node.style.cursor = "pointer";
+      node.addEventListener("click", () => { hideTip(); onClick(); });
+      node.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hideTip(); onClick(); } });
+    }
   }
-  function empty(box) { box.replaceChildren(el("div", { class: "empty", text: "No trips match the filters" })); }
+  function empty(box, text = "No trips match the filters") { box.replaceChildren(el("div", { class: "empty", text })); }
 
   // ---------- KPIs ----------
+  function streak(daySet) {
+    let best = 0, bestEnd = null, run = 0, prev = null;
+    [...daySet].sort().forEach((k) => {
+      const d = parse(k);
+      run = prev && (d - prev) / 864e5 < 1.5 ? run + 1 : 1;
+      if (run > best) { best = run; bestEnd = d; }
+      prev = d;
+    });
+    return { best, bestEnd };
+  }
   function renderKpis(rows) {
     const journeys = new Set(rows.map((l) => l.journey));
     const spent = rows.reduce((s, l) => s + l.fare, 0);
-    const mins = rows.reduce((s, l) => s + (l.mins || 0), 0);
-    const daysSet = new Set(rows.map((l) => ymd(l.onD)));
-    const failed = rows.filter((l) => l.failedTouchOff).length;
+    const timed = rows.filter((l) => l.mins != null);
+    const mins = timed.reduce((s, l) => s + l.mins, 0);
+    const perDay = {};
+    rows.forEach((l) => { const k = ymd(l.onD); perDay[k] = (perDay[k] || 0) + 1; });
+    const daysN = Object.keys(perDay).length;
+    const busiest = Object.entries(perDay).sort((a, b) => b[1] - a[1])[0];
+    const failed = rows.filter((l) => l.failedTouchOff);
     const transfers = rows.filter((l) => l.transfer).length;
     const spanDays = rows.length ? Math.round((parse(state.to) - parse(state.from)) / 864e5) + 1 : 0;
     const tops = topups.filter((t) => t.kind !== "adjustment" && ymd(t.d) >= state.from && ymd(t.d) <= state.to);
+    const kmTotal = rows.reduce((s, l) => s + (l.km || 0), 0);
+    const approx = rows.filter((l) => l.kmApprox).length;
+    const routeCounts = {};
+    rows.forEach((l) => { const k = routeKey(l); if (k) routeCounts[k] = (routeCounts[k] || 0) + 1; });
+    const topRoute = Object.entries(routeCounts).sort((a, b) => b[1] - a[1])[0];
+    const st = streak(Object.keys(perDay));
     const tiles = [
-      { label: "Journeys", value: journeys.size.toLocaleString(), sub: `${rows.length} legs, ${transfers} transfers`, hero: true },
+      { label: "Journeys", value: journeys.size.toLocaleString(), sub: `${plural(rows.length, "leg")}, ${plural(transfers, "transfer")}`, hero: true },
       { label: "Spent on fares", value: money(spent), sub: journeys.size ? `${money(spent / journeys.size)} per journey` : "" },
-      { label: "Time on board", value: `${(mins / 60).toFixed(1)} h`, sub: rows.length ? `${Math.round(mins / rows.filter((l) => l.mins != null).length || 0)} min per leg` : "" },
-      { label: "Days travelled", value: daysSet.size, sub: spanDays ? `of ${spanDays} days in range` : "" },
-      { label: "Failed touch-offs", value: failed, sub: failed ? `${money(rows.filter((l) => l.failedTouchOff).reduce((s, l) => s + l.fare, 0))} in penalty fares` : "none" },
-      { label: "Top-ups", value: money(tops.reduce((s, t) => s + (t.amount || 0), 0)), sub: `${tops.length} top-up${tops.length === 1 ? "" : "s"}` },
+      { label: "Distance", value: `${fmtKm(kmTotal)} km`, sub: journeys.size ? `${fmtKm(kmTotal / journeys.size)} km per journey${approx ? ` · ${approx} straight-line` : ""}` : "" },
+      { label: "Time on board", value: `${(mins / 60).toFixed(1)} h`, sub: timed.length ? `${Math.round(mins / timed.length)} min per leg` : "" },
+      { label: "Days travelled", value: daysN.toLocaleString(), sub: spanDays ? `of ${spanDays} days in range` : "" },
+      { label: "Longest streak", value: plural(st.best, "day"), sub: st.bestEnd ? `ending ${fmtDate(st.bestEnd)}` : "" },
+      { label: "Busiest day", value: busiest ? plural(busiest[1], "leg") : "–", sub: busiest ? fmtDate(parse(busiest[0])) : "" },
+      { label: "Routes used", value: Object.keys(routeCounts).length, sub: topRoute ? `most: ${routeInfo.get(topRoute[0]).label} (${topRoute[1]})` : "" },
+      { label: "Failed touch-offs", value: failed.length, sub: failed.length ? `${money(failed.reduce((s, l) => s + l.fare, 0))} in penalty fares` : "none" },
+      { label: "Top-ups", value: money(tops.reduce((s, t) => s + (t.amount || 0), 0)), sub: `${plural(tops.length, "top-up")} (date filter only)` },
     ];
     $("#kpis").replaceChildren(...tiles.map((t) => el("div", { class: "kpi" + (t.hero ? " hero" : "") },
       el("div", { class: "label", text: t.label }), el("div", { class: "value", text: String(t.value) }), el("div", { class: "sub", text: t.sub }))));
   }
 
   // ---------- map ----------
-  let map, tileLayer, mapLayer;
+  let map, tileLayer, mapLayer, netLayer, legend;
   function initMap() {
     map = L.map("map", { scrollWheelZoom: false, maxZoom: 16 });
     // Esri gray canvas tiles: no API key, and unlike tile.openstreetmap.org they don't
@@ -179,78 +334,117 @@
       const v = dark.matches ? "Dark" : "Light";
       tileLayer = L.layerGroup([
         L.tileLayer(esri(`World_${v}_Gray_Base`), {
-          attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+          attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors · Routes: Translink GTFS",
           maxZoom: 16,
         }),
         L.tileLayer(esri(`World_${v}_Gray_Reference`), { maxZoom: 16 }),
       ]).addTo(map);
     };
     setTiles();
-    dark.addEventListener("change", () => { setTiles(); render(); });
+    dark.addEventListener("change", () => { setTiles(); renderNetwork(); render(); });
+    map.createPane("network").style.zIndex = 350; // under trips (overlayPane is 400)
+    netLayer = L.layerGroup().addTo(map);
     mapLayer = L.layerGroup().addTo(map);
+    legend = L.control({ position: "bottomleft" });
+    legend.onAdd = () => L.DomUtil.create("div", "legend");
+    legend.addTo(map);
+    renderNetwork();
     const pts = Object.values(stops).map((s) => [s.lat, s.lon]);
     if (pts.length) map.fitBounds(pts, { padding: [16, 16] });
     else map.setView([-27.47, 153.03], 12);
   }
 
+  function renderNetwork() {
+    netLayer.clearLayers();
+    if (!D.network || !$("#network").checked) return;
+    for (const [mode, lines] of Object.entries(D.network)) {
+      lines.forEach((ln) => {
+        const pl = L.polyline(ln.pts, {
+          pane: "network", color: modeColor(mode), weight: 2, opacity: 0.3, dashArray: mode === "tram" ? "10 6" : null,
+        });
+        pl.bindTooltip(`<strong>${esc(MODE_LABEL[mode])} ${esc(ln.route)}</strong><br>${esc(ln.name)}`, { sticky: true });
+        netLayer.addLayer(pl);
+      });
+    }
+  }
+
+  function legPoints(l, straight) {
+    if (!straight && l.path && D.paths[l.path]) return D.paths[l.path];
+    const A = stops[l.from], B = stops[l.to];
+    return [[A.lat, A.lon], [B.lat, B.lon]];
+  }
+
+  function fitTo(rows) {
+    const pts = [];
+    rows.forEach((l) => [l.from, l.to].forEach((n) => n && stops[n] && pts.push([stops[n].lat, stops[n].lon])));
+    if (pts.length) map.fitBounds(pts, { padding: [24, 24], maxZoom: 15 });
+  }
+
   function renderMap(rows) {
     mapLayer.clearLayers();
-    const s1 = css("--s1"), s2 = css("--s2"), surface = css("--surface");
-    const use = {}, lines = new Map();
+    const ink = css("--ink"), surface = css("--surface");
+    const use = {}, lines = new Map(), modeN = {};
     const straight = !D.paths || $("#straight").checked;
     rows.forEach((l) => {
+      modeN[l.mode] = (modeN[l.mode] || 0) + 1;
       if (l.from) { use[l.from] = use[l.from] || { on: 0, off: 0 }; use[l.from].on++; }
       if (l.to) { use[l.to] = use[l.to] || { on: 0, off: 0 }; use[l.to].off++; }
       if (!l.from || !l.to || !stops[l.from] || !stops[l.to]) return;
       // one line per route path; legs with no timetabled match (or in straight mode) per stop pair
-      const k = !straight && l.path ? l.path : pairKey(l.from, l.to);
-      const ln = lines.get(k) || { pts: legPoints(l, straight), routed: !straight && !!l.path, n: 0, trips: new Map(), routes: new Map(), mins: [] };
+      const routed = !straight && !!l.path;
+      const k = routed ? l.path : `${l.mode}\u0001${pairKey(l.from, l.to)}`;
+      const ln = lines.get(k) || { pts: legPoints(l, straight), routed, mode: l.mode, pair: pairKey(l.from, l.to), n: 0, trips: new Map(), routes: new Map(), mins: [] };
       ln.n++;
       const t = `${l.from} → ${l.to}`;
       ln.trips.set(t, (ln.trips.get(t) || 0) + 1);
-      if (l.route) ln.routes.set(l.route, (ln.routes.get(l.route) || 0) + 1);
+      if (l.route) { const r = routeLabel(l); ln.routes.set(r, (ln.routes.get(r) || 0) + 1); }
       if (l.mins != null) ln.mins.push(l.mins);
       lines.set(k, ln);
     });
     const maxN = Math.max(1, ...[...lines.values()].map((p) => p.n));
     [...lines.values()].sort((x, y) => x.n - y.n).forEach((p) => {
       const line = L.polyline(p.pts, {
-        color: s1, weight: 1.5 + 7 * Math.sqrt(p.n / maxN), opacity: 0.35 + 0.45 * (p.n / maxN),
-        lineCap: "round", lineJoin: "round", dashArray: p.routed || straight ? null : "4 6",
+        color: modeColor(p.mode), weight: 2 + 7 * Math.sqrt(p.n / maxN), opacity: 0.45 + 0.4 * (p.n / maxN),
+        lineCap: "round", lineJoin: "round", dashArray: p.routed || straight ? (p.mode === "tram" ? "10 6" : null) : "1 7",
       });
       const avg = p.mins.length ? Math.round(p.mins.reduce((s, v) => s + v, 0) / p.mins.length) : null;
       const routesTxt = [...p.routes].sort((a, b) => b[1] - a[1]).map(([r, n]) => `${esc(r)} (${n})`).join(", ");
       const tripsTxt = [...p.trips].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t, n]) => `${esc(t)}: ${n}`).join("<br>");
-      line.bindTooltip(`<strong>${p.n} trip${p.n > 1 ? "s" : ""}</strong>${routesTxt ? ` · likely route ${routesTxt}` : ""}<br>${tripsTxt}` +
-        `${avg != null ? `<br>avg ${avg} min` : ""}${!p.routed && !straight ? `<br><span style="opacity:.7">no timetabled service found; straight line</span>` : ""}`, { sticky: true });
+      line.bindTooltip(`<strong>${plural(p.n, "trip")}</strong> · ${MODE_LABEL[p.mode]}${routesTxt ? ` ${routesTxt}` : ""}<br>${tripsTxt}` +
+        `${avg != null ? `<br>avg ${avg} min` : ""}${!p.routed && !straight ? `<br><span style="opacity:.7">no timetabled service found; straight line</span>` : ""}` +
+        `<br><span style="opacity:.7">click to ${state.pair === p.pair ? "clear filter" : "filter to these stops"}</span>`, { sticky: true });
+      line.on("click", () => toggle("pair", p.pair));
       mapLayer.addLayer(line);
     });
-    // selected journey on top
+    // selected journey on top: a dark casing so it stands out from every mode colour
     if (state.selJourney != null) {
       legs.filter((l) => l.journey === state.selJourney).forEach((l) => {
-        if (l.from && l.to && stops[l.from] && stops[l.to])
-          mapLayer.addLayer(L.polyline(legPoints(l, straight), { color: s2, weight: 6, opacity: 0.95, lineJoin: "round" }));
+        if (!l.from || !l.to || !stops[l.from] || !stops[l.to]) return;
+        const pts = legPoints(l, straight);
+        mapLayer.addLayer(L.polyline(pts, { color: ink, weight: 9, opacity: 0.9, lineJoin: "round", lineCap: "round" }));
+        mapLayer.addLayer(L.polyline(pts, { color: modeColor(l.mode), weight: 5, opacity: 1, lineJoin: "round", lineCap: "round" }));
       });
     }
     const maxUse = Math.max(1, ...Object.values(use).map((u) => u.on + u.off));
-    Object.entries(use).sort((a, b) => b[1].on + b[1].off - (a[1].on + a[1].off)).reverse().forEach(([name, u]) => {
+    Object.entries(use).sort((a, b) => a[1].on + a[1].off - (b[1].on + b[1].off)).forEach(([name, u]) => {
       const s = stops[name];
       if (!s) return;
       const n = u.on + u.off;
       const selected = name === state.stop;
       const m = L.circleMarker([s.lat, s.lon], {
-        radius: 4 + 14 * Math.sqrt(n / maxUse), color: surface, weight: 2,
-        fillColor: selected ? s2 : s1, fillOpacity: 0.9,
+        radius: 4 + 12 * Math.sqrt(n / maxUse), color: selected ? ink : surface, weight: selected ? 3 : 2,
+        fillColor: modeColor(s.mode), fillOpacity: 0.95,
       });
-      m.bindTooltip(`<strong>${esc(name)}</strong><br>${u.on} tap-ons · ${u.off} tap-offs<br><span style="opacity:.7">GTFS: ${esc(s.gtfs_name)}${s.auto ? " (auto-matched, unverified)" : ""}</span>`);
-      m.on("click", () => { state.stop = state.stop === name ? "" : name; $("#stop").value = state.stop; render(); });
+      m.bindTooltip(`<strong>${esc(name)}</strong><br>${MODE_LABEL[s.mode] || "Bus"} · ${u.on} tap-ons · ${u.off} tap-offs<br><span style="opacity:.7">GTFS: ${esc(s.gtfs_name)}${s.auto ? " (auto-matched, unverified)" : ""}</span>`);
+      m.on("click", () => toggle("stop", name));
       mapLayer.addLayer(m);
     });
-  }
-  function legPoints(l, straight) {
-    if (!straight && l.path && D.paths[l.path]) return D.paths[l.path];
-    const A = stops[l.from], B = stops[l.to];
-    return [[A.lat, A.lon], [B.lat, B.lon]];
+    // legend: every mode, even ones with no trips yet
+    const box = legend.getContainer();
+    box.replaceChildren(...MODES.map((m) => el("div", { class: "lg-row" + (modeN[m] ? "" : " none") },
+      el("i", { class: `lg-line ${m}` }), `${MODE_LABEL[m]} `, el("span", { class: "count", text: modeN[m] || 0 }))));
+    if (!straight) box.append(el("div", { class: "lg-row" }, el("i", { class: "lg-line dotted" }), "No timetable match"));
+    if ($("#network").checked && D.network) box.append(el("div", { class: "lg-row" }, el("i", { class: "lg-line faint" }), "Rail & ferry network"));
   }
   function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
 
@@ -264,21 +458,21 @@
     const years = [];
     for (let y = from.getFullYear(); y <= to.getFullYear(); y++) years.push(y);
     // a single short range gets big cells; a year or more gets one 53-week row per year
-    const short = years.length === 1 && (to - from) / 864e5 < 200;
-    const first = short ? mondayOf(from) : null;
-    const cols = short ? Math.ceil(((to - first) / 864e5 + 1) / 7) : 53;
-    const W = box.clientWidth, left = short ? 30 : 64, gap = 2;
-    const cell = Math.max(6, Math.min(short ? 24 : 16, Math.floor((W - left) / cols) - gap)), step = cell + gap;
+    const shortRange = years.length === 1 && (to - from) / 864e5 < 200;
+    const first = shortRange ? mondayOf(from) : null;
+    const cols = shortRange ? Math.ceil(((to - first) / 864e5 + 1) / 7) : 53;
+    const W = box.clientWidth, left = shortRange ? 30 : 64, gap = 2;
+    const cell = Math.max(6, Math.min(shortRange ? 24 : 16, Math.floor((W - left) / cols) - gap)), step = cell + gap;
     const blockH = 16 + 7 * step + 10;
     const s = svg("svg", { width: left + cols * step, height: blockH * years.length, role: "img", "aria-label": "Trips per day calendar" }, box);
     const ramp = seqRamp(), empty0 = css("--seq-0");
     const maxN = Math.max(1, ...Object.values(perDay).map((a) => a.length));
     years.forEach((year, yi) => {
       const top = yi * blockH + 16;
-      const start = short ? first : mondayOf(new Date(year, 0, 1));
-      if (!short) svg("text", { x: 0, y: top + 3 * step + cell - 2, class: "label", text: year }, s);
-      [0, 2, 4, 6].forEach((i) => svg("text", { x: short ? 0 : 34, y: top + i * step + cell - 2, text: DAYS[i][0] + (short ? DAYS[i].slice(1) : "") }, s));
-      const end = short ? to : new Date(year, 11, 31);
+      const start = shortRange ? first : mondayOf(new Date(year, 0, 1));
+      if (!shortRange) svg("text", { x: 0, y: top + 3 * step + cell - 2, class: "label", text: year }, s);
+      [0, 2, 4, 6].forEach((i) => svg("text", { x: shortRange ? 0 : 34, y: top + i * step + cell - 2, text: DAYS[i][0] + (shortRange ? DAYS[i].slice(1) : "") }, s));
+      const end = shortRange ? to : new Date(year, 11, 31);
       let lastMonth = -1;
       for (let d = new Date(start), i = 0; d <= end; d.setDate(d.getDate() + 1), i++) {
         const w = Math.floor(i / 7), dow = weekday(d), k = ymd(d);
@@ -286,7 +480,7 @@
           lastMonth = d.getMonth();
           svg("text", { x: left + w * step, y: top - 5, text: MONTHS[d.getMonth()] }, s);
         }
-        if (d.getFullYear() !== year && !short) continue;
+        if (d.getFullYear() !== year && !shortRange) continue;
         if (k < state.from || k > state.to) continue;
         const list = perDay[k] || [];
         const fill = list.length ? ramp[Math.min(ramp.length - 1, Math.floor((list.length / maxN) * (ramp.length - 1)))] : empty0;
@@ -294,10 +488,9 @@
         svg("rect", { class: "mark", x: left + w * step, y: top + dow * step, width: cell, height: cell, rx: Math.min(3, cell / 4), fill }, g);
         const date = new Date(d);
         hoverable(g, (e) => showTip(e, fmtDate(date), list.length
-          ? [[`${list.length} leg${list.length > 1 ? "s" : ""}`, money(list.reduce((a, l) => a + l.fare, 0))], ...list.map((l) => [onTime(l), `${stopName(l.from)} → ${l.to || "no tap-off"}`])]
-          : [["No trips", ""]]));
-        g.style.cursor = "pointer";
-        g.addEventListener("click", () => setDay(k));
+          ? [[plural(list.length, "leg"), money(list.reduce((a, l) => a + l.fare, 0))],
+             ...list.map((l) => [onTime(l), `${routeLabel(l) ? routeLabel(l) + " · " : ""}${stopName(l.from)} → ${l.to || "no tap-off"}`, modeColor(l.mode)])]
+          : [["No trips", ""]]), () => setDay(k));
       }
     });
   }
@@ -328,57 +521,91 @@
           class: "mark", x: left + (h - h0) * (cw + gap), y: top + d * (ch + gap), width: cw, height: ch, rx: 3,
           fill: n ? ramp[Math.min(ramp.length - 1, Math.ceil((n / maxN) * (ramp.length - 1)))] : empty0,
         }, g);
-        hoverable(g, (e) => showTip(e, `${name} ${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59`, [[`${n} trip${n === 1 ? "" : "s"}`, "tapped on"]]));
+        const hh = String(h).padStart(2, "0");
+        hoverable(g, (e) => showTip(e, `${name} ${hh}:00–${hh}:59`, [[plural(n, "trip"), "tapped on"], ["", "click to filter to this day and hour"]]),
+          () => {
+            const same = state.days.size === 1 && state.days.has(d) && state.hours === `${h}-${h + 1}`;
+            state.days = same ? new Set([0, 1, 2, 3, 4, 5, 6]) : new Set([d]);
+            state.hours = same ? "" : `${h}-${h + 1}`;
+            render();
+          });
       }
     });
     for (let h = h0; h <= h1; h++) if ((h - h0) % (hours > 14 ? 3 : 2) === 0)
       svg("text", { x: left + (h - h0) * (cw + gap), y: top + 7 * (ch + gap) + 12, text: `${String(h).padStart(2, "0")}h` }, s);
   }
 
-  // ---------- column chart (weekly, durations) ----------
-  function columnChart(box, data, { label, tipHead, tipRows, labelEvery = 1 }) {
+  // ---------- column chart (weekly, durations, spending) ----------
+  function columnChart(box, data, { label, tipHead, tipRows, labelEvery = 1, onClick, isOn, fmt = (v) => v }) {
     box.replaceChildren();
     if (!data.length || !data.some((d) => d.v)) return empty(box);
-    const W = box.clientWidth, H = 200, left = 28, bottom = 22, top = 8;
+    const W = box.clientWidth, H = 200, left = 34, bottom = 22, top = 8;
     const maxV = niceMax(Math.max(...data.map((d) => d.v)));
     const s = svg("svg", { width: W, height: H, role: "img" }, box);
     const y = (v) => top + (H - top - bottom) * (1 - v / maxV);
     [0, 0.5, 1].forEach((f) => {
       const v = maxV * f;
       svg("line", { class: f ? "grid-line" : "axis-line", x1: left, x2: W, y1: y(v), y2: y(v) }, s);
-      svg("text", { x: left - 6, y: y(v) + 4, "text-anchor": "end", text: Number.isInteger(v) ? v : v.toFixed(1) }, s);
+      svg("text", { x: left - 6, y: y(v) + 4, "text-anchor": "end", text: fmt(Number.isInteger(v) ? v : +v.toFixed(1)) }, s);
     });
     const band = (W - left) / data.length, bw = Math.max(2, Math.min(24, band - 2));
-    const s1 = css("--s1");
+    const s1 = css("--s1"), muted = css("--axis");
+    const anyOn = isOn && data.some(isOn);
     data.forEach((d, i) => {
       const x = left + i * band + (band - bw) / 2;
       const g = svg("g", {}, s);
       svg("rect", { class: "hit", x: left + i * band, y: top, width: band, height: H - top - bottom }, g);
       if (d.v) {
         const h = y(0) - y(d.v), r = Math.min(4, bw / 2, h);
-        svg("path", { class: "mark", fill: s1, d: `M${x},${y(0)}V${y(d.v) + r}q0,-${r} ${r},-${r}h${bw - 2 * r}q${r},0 ${r},${r}V${y(0)}Z` }, g);
+        svg("path", { class: "mark", fill: anyOn && !isOn(d) ? muted : s1, d: `M${x},${y(0)}V${y(d.v) + r}q0,-${r} ${r},-${r}h${bw - 2 * r}q${r},0 ${r},${r}V${y(0)}Z` }, g);
       }
-      hoverable(g, (e) => showTip(e, tipHead(d), tipRows(d)));
+      hoverable(g, (e) => showTip(e, tipHead(d), tipRows(d)), onClick && (() => onClick(d)));
       if (i % labelEvery === 0) svg("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle", text: label(d) }, s);
     });
   }
+
+  function monthBuckets(rows) {
+    const buckets = new Map();
+    for (let d = new Date(parse(state.from).getFullYear(), parse(state.from).getMonth(), 1); d <= parse(state.to); d.setMonth(d.getMonth() + 1))
+      buckets.set(ymd(d), { d: new Date(d), v: 0, n: 0, fare: 0 });
+    rows.forEach((l) => { const b = buckets.get(ymd(new Date(l.onD.getFullYear(), l.onD.getMonth(), 1))); if (b) { b.n++; b.fare += l.fare; } });
+    return [...buckets.values()];
+  }
+  const monthLabel = (d) => `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
 
   function renderWeekly(rows) {
     const box = $("#weekly");
     const monthly = (parse(state.to) - parse(state.from)) / 864e5 > 200;
     $("#weeklyTitle").textContent = monthly ? "Trips per month" : "Trips per week";
     if (!rows.length) return empty(box);
-    const bucket = (d) => (monthly ? new Date(d.getFullYear(), d.getMonth(), 1) : mondayOf(d));
-    const buckets = new Map();
-    for (let d = bucket(parse(state.from)); d <= parse(state.to); monthly ? d.setMonth(d.getMonth() + 1) : d.setDate(d.getDate() + 7))
-      buckets.set(ymd(d), { d: new Date(d), v: 0, fare: 0 });
-    rows.forEach((l) => { const b = buckets.get(ymd(bucket(l.onD))); if (b) { b.v++; b.fare += l.fare; } });
-    const data = [...buckets.values()];
+    let data;
+    if (monthly) data = monthBuckets(rows).map((b) => ({ ...b, v: b.n }));
+    else {
+      const buckets = new Map();
+      for (let d = mondayOf(parse(state.from)); d <= parse(state.to); d.setDate(d.getDate() + 7)) buckets.set(ymd(d), { d: new Date(d), v: 0, fare: 0 });
+      rows.forEach((l) => { const b = buckets.get(ymd(mondayOf(l.onD))); if (b) { b.v++; b.fare += l.fare; } });
+      data = [...buckets.values()];
+    }
     columnChart(box, data, {
-      label: (d) => (monthly ? `${MONTHS[d.d.getMonth()]} ${String(d.d.getFullYear()).slice(2)}` : `${d.d.getDate()} ${MONTHS[d.d.getMonth()]}`),
+      label: (d) => (monthly ? monthLabel(d.d) : `${d.d.getDate()} ${MONTHS[d.d.getMonth()]}`),
       labelEvery: Math.max(1, Math.ceil(data.length / 6)),
       tipHead: (d) => (monthly ? `${MONTHS[d.d.getMonth()]} ${d.d.getFullYear()}` : `Week of ${fmtDate(d.d)}`),
-      tipRows: (d) => [[`${d.v} legs`, ""], [money(d.fare), "fares"]],
+      tipRows: (d) => [[plural(d.v, "leg"), ""], [money(d.fare), "fares"], ["", "click to zoom in"]],
+      onClick: (d) => {
+        const end = monthly ? new Date(d.d.getFullYear(), d.d.getMonth() + 1, 0) : new Date(d.d.getFullYear(), d.d.getMonth(), d.d.getDate() + 6);
+        state.from = ymd(d.d) < minDate ? minDate : ymd(d.d);
+        state.to = ymd(end) > maxDate ? maxDate : ymd(end);
+        render();
+      },
+    });
+  }
+
+  function renderSpend(rows) {
+    const data = monthBuckets(rows).map((b) => ({ ...b, v: +b.fare.toFixed(2) }));
+    columnChart($("#spend"), data, {
+      label: (d) => monthLabel(d.d), labelEvery: Math.max(1, Math.ceil(data.length / 6)), fmt: (v) => `$${v}`,
+      tipHead: (d) => `${MONTHS[d.d.getMonth()]} ${d.d.getFullYear()}`,
+      tipRows: (d) => [[money(d.fare), "fares"], [plural(d.n, "leg"), ""], [d.n ? money(d.fare / d.n) : "–", "average per leg"]],
     });
   }
 
@@ -394,39 +621,101 @@
     columnChart(box, data, {
       label: (d) => `${d.lo}`, labelEvery: Math.max(1, Math.ceil(data.length / 8)),
       tipHead: (d) => `${d.lo}–${d.lo + binW - 1} min`,
-      tipRows: (d) => [[`${d.v} legs`, ""], [`${median} min`, "median overall"]],
+      tipRows: (d) => [[plural(d.v, "leg"), ""], [`${median} min`, "median overall"], ["", "click to filter"]],
+      onClick: (d) => toggle("dur", `${d.lo}-${d.lo + binW}`),
+      isOn: (d) => state.dur === `${d.lo}-${d.lo + binW}`,
     });
   }
 
-  // ---------- top routes ----------
-  function renderRoutes(rows) {
-    const box = $("#routes");
+  // ---------- horizontal bar lists (modes, routes, stop pairs, stops) ----------
+  function barList(box, items, { label = "", max } = {}) {
     box.replaceChildren();
+    if (!items.length) return empty(box);
+    const W = box.clientWidth, rowH = 36, barH = 12, valW = 44;
+    const maxN = max || Math.max(1, ...items.map((it) => it.n));
+    const anyOn = items.some((it) => it.on);
+    const s = svg("svg", { width: W, height: items.length * rowH, role: "img", "aria-label": label }, box);
+    items.forEach((it, i) => {
+      const g = svg("g", { class: anyOn && !it.on ? "dim" : "" }, s), y = i * rowH;
+      svg("rect", { class: "hit", x: 0, y, width: W, height: rowH }, g);
+      const t = svg("text", { class: "label", x: 0, y: y + 12 }, g);
+      t.textContent = it.label;
+      if (it.n) {
+        const w = Math.max(6, (W - valW) * (it.n / maxN));
+        svg("path", { class: "mark", fill: it.color, d: `M0,${y + 17}h${w - 4}q4,0 4,4v${barH - 8}q0,4 -4,4h-${w - 4}Z` }, g);
+        svg("text", { class: "value", x: w + 6, y: y + 27, text: it.value ?? it.n }, g);
+      } else svg("text", { class: "value none", x: 0, y: y + 27, text: it.zero || "0" }, g);
+      hoverable(g, (e) => showTip(e, it.tipHead || it.label, it.tip || []), it.onClick);
+    });
+  }
+
+  function renderModes() {
+    const rows = filtered({ ignore: "modes" }); // so you can see what you'd get back by re-enabling a mode
+    const by = Object.fromEntries(MODES.map((m) => [m, { n: 0, fare: 0, mins: 0, km: 0 }]));
+    rows.forEach((l) => { const b = by[l.mode] || by.bus; b.n++; b.fare += l.fare; b.mins += l.mins || 0; b.km += l.km || 0; });
+    barList($("#modes"), MODES.map((m) => ({
+      label: MODE_LABEL[m], n: by[m].n, color: modeColor(m), on: state.modes.size < MODES.length && state.modes.has(m),
+      zero: `no ${MODE_LABEL[m].toLowerCase()} trips${state.modes.size < MODES.length || rows.length < legs.length ? " in this filter" : " yet"}`,
+      tip: [[plural(by[m].n, "leg"), "", modeColor(m)], [money(by[m].fare), "fares"], [`${(by[m].mins / 60).toFixed(1)} h`, "on board"], [`${fmtKm(by[m].km)} km`, "travelled"],
+        ["", state.modes.size === 1 && state.modes.has(m) ? "click to show all modes" : "click to show only this mode"]],
+      onClick: () => { state.modes = state.modes.size === 1 && state.modes.has(m) ? new Set(MODES) : new Set([m]); render({ fit: true }); },
+    })), { label: "Legs by mode" });
+  }
+
+  function renderRouteNums(rows) {
+    const counts = new Map();
+    rows.forEach((l) => {
+      const k = routeKey(l);
+      if (!k) return;
+      const c = counts.get(k) || { n: 0, fare: 0, mins: [] };
+      c.n++; c.fare += l.fare; if (l.mins != null) c.mins.push(l.mins);
+      counts.set(k, c);
+    });
+    const top = [...counts].sort((a, b) => b[1].n - a[1].n).slice(0, 10);
+    barList($("#routeNums"), top.map(([k, c]) => {
+      const r = routeInfo.get(k);
+      const avg = c.mins.length ? Math.round(c.mins.reduce((a, b) => a + b, 0) / c.mins.length) : null;
+      return {
+        label: `${MODE_LABEL[r.mode]} ${short(r.label, 34)}${r.mode !== "train" && r.name ? ` · ${short(r.name, 30)}` : ""}`, n: c.n, color: modeColor(r.mode), on: state.route === k,
+        tipHead: `${MODE_LABEL[r.mode]} ${r.route}${r.name ? ` · ${r.name}` : ""}`,
+        tip: [[plural(c.n, "leg"), "", modeColor(r.mode)], [money(c.fare), "fares"], ...(avg != null ? [[`${avg} min`, "average ride"]] : []), ["", "click to filter"]],
+        onClick: () => toggle("route", k, { fit: true }),
+      };
+    }), { label: "Top route numbers" });
+  }
+
+  function renderRoutes(rows) {
     const pairs = new Map();
     rows.forEach((l) => {
       if (!l.from || !l.to) return;
       const k = pairKey(l.from, l.to);
-      const p = pairs.get(k) || { a: l.from < l.to ? l.from : l.to, b: l.from < l.to ? l.to : l.from, n: 0, ab: 0, ba: 0 };
+      const p = pairs.get(k) || { k, a: l.from < l.to ? l.from : l.to, b: l.from < l.to ? l.to : l.from, n: 0, ab: 0, ba: 0, mode: l.mode };
       p.n++; l.from === p.a ? p.ab++ : p.ba++;
       pairs.set(k, p);
     });
     const top = [...pairs.values()].sort((x, y) => y.n - x.n).slice(0, 8);
-    if (!top.length) return empty(box);
-    const W = box.clientWidth, rowH = 40, barH = 12, valW = 34;
-    const maxN = top[0].n, s1 = css("--s1");
-    const s = svg("svg", { width: W, height: top.length * rowH, role: "img", "aria-label": "Top routes" }, box);
-    top.forEach((p, i) => {
-      const g = svg("g", {}, s), y = i * rowH;
-      svg("rect", { class: "hit", x: 0, y, width: W, height: rowH }, g);
-      const t = svg("text", { class: "label", x: 0, y: y + 13 }, g);
-      t.textContent = `${short(p.a)} ↔ ${short(p.b)}`;
-      const w = Math.max(4, (W - valW) * (p.n / maxN));
-      svg("path", { class: "mark", fill: s1, d: `M0,${y + 19}h${w - 4}q4,0 4,4v${barH - 8}q0,4 -4,4h-${w - 4}Z` }, g);
-      svg("text", { class: "value", x: w + 6, y: y + 29, text: p.n }, g);
-      hoverable(g, (e) => showTip(e, `${p.a} ↔ ${p.b}`, [[`${p.ab}`, `${short(p.a)} → ${short(p.b)}`], [`${p.ba}`, `${short(p.b)} → ${short(p.a)}`]]));
-    });
+    barList($("#routes"), top.map((p) => ({
+      label: `${short(p.a)} ↔ ${short(p.b)}`, n: p.n, color: modeColor(p.mode), on: state.pair === p.k,
+      tipHead: `${p.a} ↔ ${p.b}`,
+      tip: [[`${p.ab}`, `${short(p.a)} → ${short(p.b)}`], [`${p.ba}`, `${short(p.b)} → ${short(p.a)}`], ["", "click to filter"]],
+      onClick: () => toggle("pair", p.k, { fit: true }),
+    })), { label: "Top stop pairs" });
   }
-  const short = (n) => (n.length > 28 ? n.slice(0, 27) + "…" : n);
+
+  function renderStops(rows) {
+    const use = new Map();
+    rows.forEach((l) => [[l.from, "on"], [l.to, "off"]].forEach(([n, k]) => {
+      if (!n) return;
+      const u = use.get(n) || { on: 0, off: 0 };
+      u[k]++; use.set(n, u);
+    }));
+    const top = [...use].sort((a, b) => b[1].on + b[1].off - (a[1].on + a[1].off)).slice(0, 10);
+    barList($("#stopsChart"), top.map(([n, u]) => ({
+      label: short(n, 44), n: u.on + u.off, color: modeColor(stops[n]?.mode), on: state.stop === n,
+      tipHead: n, tip: [[`${u.on}`, "tap-ons"], [`${u.off}`, "tap-offs"], ["", "click to filter"]],
+      onClick: () => toggle("stop", n, { fit: true }),
+    })), { label: "Most used stops" });
+  }
 
   // ---------- balance line ----------
   function renderBalance() {
@@ -442,14 +731,14 @@
     const maxV = niceMax(Math.max(...pts.map((p) => p.v)));
     const minV = Math.min(0, ...pts.map((p) => p.v));
     const x = (t) => left + (W - left - right) * ((t - t0) / (t1 - t0 || 1));
-    const y = (v) => top + (H - top - bottom) * (1 - (v - minV) / (maxV - minV));
+    const y = (v) => top + (H - top - bottom) * (1 - (v - minV) / (maxV - minV || 1));
     const s = svg("svg", { width: W, height: H, role: "img", "aria-label": "Card balance over time" }, box);
-    [0, 0.5, 1].forEach((f) => {
-      const v = minV + (maxV - minV) * f;
-      svg("line", { class: f ? "grid-line" : "axis-line", x1: left, x2: W - right, y1: y(v), y2: y(v) }, s);
+    [minV, (minV + maxV) / 2, maxV].forEach((v, i) => {
+      svg("line", { class: i ? "grid-line" : "axis-line", x1: left, x2: W - right, y1: y(v), y2: y(v) }, s);
       svg("text", { x: left - 6, y: y(v) + 4, "text-anchor": "end", text: `$${Math.round(v)}` }, s);
     });
-    const months = (t1 - t0) / (30.4 * 864e5), every = Math.max(1, Math.ceil(months / Math.max(4, (W - left) / 70)));
+    const months = (pts[pts.length - 1].d.getFullYear() - pts[0].d.getFullYear()) * 12 + pts[pts.length - 1].d.getMonth() - pts[0].d.getMonth();
+    const every = Math.max(1, Math.ceil(months / Math.max(1, Math.floor((W - left) / 70))));
     for (let d = new Date(pts[0].d.getFullYear(), pts[0].d.getMonth() + 1, 1), i = 0; d <= pts[pts.length - 1].d; d.setMonth(d.getMonth() + 1), i++)
       if (i % every === 0)
         svg("text", { x: x(+d), y: H - 6, "text-anchor": "middle", text: d.getMonth() === 0 || months > 12 && every > 1 ? `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : MONTHS[d.getMonth()] }, s);
@@ -480,7 +769,7 @@
   function renderTable(rows) {
     const k = state.sort.k, dir = state.sort.asc ? 1 : -1;
     const val = (l) => (k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD)
-      : k === "route" ? (l.route || "").padStart(6, "0") : l[k] ?? "");
+      : k === "route" ? routeLabel(l).padStart(6, "0") : l[k] ?? "");
     const sorted = [...rows].sort((a, b) => (val(a) > val(b) ? dir : val(a) < val(b) ? -dir : (a.i - b.i) * dir));
     document.querySelectorAll("#trips th").forEach((th) => {
       th.classList.toggle("sorted", th.dataset.k === k);
@@ -495,39 +784,67 @@
       if (l.transfer) fromCell.append(el("span", { class: "tag", text: "transfer" }));
       if (stops[l.from]?.auto || stops[l.to]?.auto) toCell.append(el("span", { class: "tag", text: "stop unverified" }));
       tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }), el("td", { text: hm(l.offD) }),
-        el("td", { text: l.route || "", title: l.route ? `likely ${l.mode || "bus"} route, from the current timetable` : "" }),
-        fromCell, toCell, el("td", { class: "num", text: l.mins ?? "" }), el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: money(l.balance) }));
-      tr.onclick = () => { state.selJourney = state.selJourney === l.journey ? null : l.journey; renderMap(filtered()); renderTable(filtered()); };
+        el("td", {}, el("i", { class: `swatch ${l.mode}` }), MODE_LABEL[l.mode]),
+        el("td", { text: routeLabel(l), title: l.route ? `likely route ${l.route}${l.routeName ? ` (${l.routeName})` : ""}, from the current timetable` : "no timetable match" }),
+        fromCell, toCell, el("td", { class: "num", text: l.mins ?? "" }),
+        el("td", { class: "num", text: l.km != null ? (l.kmApprox ? "~" : "") + l.km.toFixed(1) : "", title: l.kmApprox ? "straight line between the stops" : "" }),
+        el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: money(l.balance) }));
+      tr.onclick = () => {
+        state.selJourney = state.selJourney === l.journey ? null : l.journey;
+        renderMap(filtered()); renderTable(filtered());
+        if (state.selJourney != null) fitTo(legs.filter((x) => x.journey === state.selJourney));
+      };
       return tr;
     }));
-    $("#tableNote").textContent = `${rows.length} legs. Click a row to highlight its journey on the map; transfer legs are indented.`;
+    $("#tableNote").textContent = `${plural(rows.length, "leg")}. Click a row to show its journey on the map; transfer legs are indented. ~ marks straight-line distances.`;
   }
   document.querySelectorAll("#trips th").forEach((th) => (th.onclick = () => {
     state.sort = { k: th.dataset.k, asc: state.sort.k === th.dataset.k ? !state.sort.asc : false };
     renderTable(filtered());
   }));
 
+  function downloadCsv() {
+    const cols = ["date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
+    const q = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+    const lines = [cols.join(",")].concat(filtered().map((l) => [
+      ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.km, l.kmApprox ? 1 : 0,
+      l.fare.toFixed(2), l.balance, l.transfer ? 1 : 0, l.failedTouchOff ? 1 : 0, l.journey,
+    ].map(q).join(",")));
+    const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), download: `go-card-trips-${state.from}-to-${state.to}.csv` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
   // ---------- render ----------
-  function render() {
-    $("#from").value = state.from; $("#to").value = state.to;
+  function render({ fit = false } = {}) {
+    syncControls();
     const rows = filtered();
+    if (state.selJourney != null && !rows.some((l) => l.journey === state.selJourney)) state.selJourney = null;
+    renderActive(rows);
     renderKpis(rows);
     renderMap(rows);
+    if (fit && rows.length) fitTo(rows);
     renderCalendar(rows);
     renderHeatmap(rows);
     renderWeekly(rows);
+    renderModes();
+    renderRouteNums(rows);
     renderRoutes(rows);
+    renderStops(rows);
     renderDurations(rows);
+    renderSpend(rows);
     renderBalance();
     renderTable(rows);
+    writeHash();
   }
 
   const unverified = Object.values(stops).filter((s) => s.auto).length;
   $("#subtitle").textContent = `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
     (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify in data/stops.json` : "");
+  readHash();
   setupFilters();
   initMap();
-  render();
+  render({ fit: !!location.hash });
   let rt;
   addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 })();

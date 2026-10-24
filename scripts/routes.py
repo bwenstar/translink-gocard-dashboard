@@ -19,7 +19,8 @@ import zipfile
 from collections import defaultdict
 
 NEAR_M = 200
-CACHE_VERSION = 1
+CACHE_VERSION = 3
+MODES = {0: "tram", 2: "train", 3: "bus", 4: "ferry"}
 
 
 def metres(a, b):
@@ -79,7 +80,7 @@ def _cut(shape, a, b):
     return [list(a)] + [[round(p[0], 5), round(p[1], 5)] for p in _simplify(seg)] + [list(b)]
 
 
-def _find_options(zf, pairs, near):
+def _find_options(zf, pairs, near, skip_routes):
     """{pair: [[route_id, shape_id, stopA, stopB, penalty_m, [[minute, weekday_mask], ...]], ...]}"""
     want = defaultdict(list)  # gtfs stop_id -> [(name, distance)]
     for name, cands in near.items():
@@ -91,7 +92,8 @@ def _find_options(zf, pairs, near):
     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     masks = {r[h["service_id"]]: sum(1 << i for i, d in enumerate(days) if r[h[d]] == "1") for r in it}
     h, it = _table(zf, "trips.txt")
-    trips = {r[h["trip_id"]]: (r[h["route_id"]], r[h["shape_id"]], masks.get(r[h["service_id"]], 127)) for r in it}
+    trips = {r[h["trip_id"]]: (r[h["route_id"]], r[h["shape_id"]], masks.get(r[h["service_id"]], 127)) for r in it
+             if r[h["route_id"]] not in skip_routes}
 
     # trip -> name -> (seq, stop_id, minute, distance), keeping the closest stop per name
     calls = defaultdict(dict)
@@ -129,11 +131,14 @@ def _load_shapes(zf, shape_ids):
     return {k: [(a, b) for _, a, b in sorted(v)] for k, v in pts.items()}
 
 
-def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
+def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
     """Adds "route" (short name), "mode" and "path" (a key into the returned paths) to legs.
 
-    name_to_stop: go card name -> GTFS stop_id. Returns ({path_key: [[lat, lon], ...]}, stats).
+    name_to_stop: go card name -> GTFS stop_id. expect: go card name -> the mode its stop
+    looks like (train station, ferry terminal...); options of another mode are penalised.
+    Returns ({path_key: [[lat, lon], ...]}, stats).
     """
+    expect = expect or {}
     zsig = f"{zip_path.stat().st_size}:{int(zip_path.stat().st_mtime)}"
     try:
         cache = json.loads(cache_path.read_text())
@@ -152,7 +157,8 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
 
     with zipfile.ZipFile(zip_path) as zf:
         h, it = _table(zf, "routes.txt")
-        routes = {r[h["route_id"]]: (r[h["route_short_name"]], int(r[h["route_type"]])) for r in it}
+        routes = {r[h["route_id"]]: (r[h["route_short_name"]], int(r[h["route_type"]]), r[h["route_long_name"]])
+                  for r in it}
         if todo:
             platforms = [(sid, (float(r["stop_lat"]), float(r["stop_lon"]))) for sid, r in gtfs.items()
                          if r.get("location_type", "0") in ("", "0")]
@@ -163,7 +169,9 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
                 here = (float(g["stop_lat"]), float(g["stop_lon"]))
                 near[n] = [(sid, metres(here, ll)) for sid, ll in platforms
                            if abs(ll[0] - here[0]) < 0.003 and metres(here, ll) <= NEAR_M]
-            found = _find_options(zf, todo, near)
+            # temporary rail replacement buses would otherwise "explain" train trips
+            skip = {rid for rid, (_, _, name) in routes.items() if "rail replacement" in name.lower()}
+            found = _find_options(zf, todo, near, skip)
             for p in todo:
                 cache["pairs"][pkey(*p)] = found.get(p, [])
 
@@ -177,11 +185,14 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
             on = dt.datetime.fromisoformat(l["on"])
             bit, minute = 1 << on.weekday(), on.hour * 60 + on.minute
             best, best_s = None, math.inf
+            want = {expect.get(l["from"]), expect.get(l["to"])} - {None, "bus"}
             for route_id, shape_id, sa, sb, pen, deps in opts:
                 same_day = [m for m, mask in deps if mask & bit] or [m for m, _ in deps]
                 gap = min(min(abs(m - minute), abs(m - 1440 - minute)) for m in same_day)
                 s = gap if not l["timeUnknown"] else 0
                 s += pen / 50  # 50 m from the mapped stop ~ 1 minute of timetable gap
+                if want and MODES.get(routes.get(route_id, ("", 3, ""))[1]) not in want:
+                    s += 120  # a bus between two train stations only if nothing else fits
                 if s < best_s:
                     best, best_s = (route_id, shape_id, sa, sb), s
             chosen.append(best)
@@ -199,14 +210,13 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(cache))
 
-    mode_names = {0: "tram", 2: "train", 3: "bus", 4: "ferry"}
     paths, routed = {}, 0
     for l, c in zip(legs, chosen):
         if not c:
             continue
         route_id, sh, sa, sb = c
-        short, rtype = routes.get(route_id, ("", 3))
-        l["route"], l["mode"] = short or None, mode_names.get(rtype, "bus")
+        short, rtype, long_name = routes.get(route_id, ("", 3, ""))
+        l["route"], l["routeName"], l["mode"] = short or None, long_name or None, MODES.get(rtype, "bus")
         k = f"{sh}:{sa}:{sb}"
         if k in cache["paths"]:
             l["path"] = k
@@ -214,3 +224,45 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path):
             routed += 1
     return paths, {"legs": routed, "pairs": len(pairs),
                    "unmatched": sorted(f"{a} → {b}" for a, b in pairs if not cache["pairs"].get(pkey(a, b)))}
+
+
+def network(zip_path, cache_path):
+    """Rail, light rail and ferry lines for the map's network layer: {mode: [{route, name, pts}]}.
+
+    One shape per route (the one most trips use), simplified to ~25 m. Cached with the paths.
+    """
+    try:
+        cache = json.loads(cache_path.read_text())
+    except (OSError, ValueError):
+        cache = {}
+    zsig = f"{zip_path.stat().st_size}:{int(zip_path.stat().st_mtime)}"
+    if cache.get("feed") == zsig and cache.get("v") == CACHE_VERSION and "network" in cache:
+        return cache["network"]
+    with zipfile.ZipFile(zip_path) as zf:
+        h, it = _table(zf, "routes.txt")
+        lines = {}
+        for r in it:
+            mode = MODES.get(int(r[h["route_type"]]))
+            if mode in ("train", "ferry", "tram"):
+                lines[r[h["route_id"]]] = (mode, r[h["route_short_name"]], r[h["route_long_name"]])
+        counts = defaultdict(lambda: defaultdict(int))  # (mode, short) -> shape -> trips
+        names = {}
+        h, it = _table(zf, "trips.txt")
+        for r in it:
+            info = lines.get(r[h["route_id"]])
+            if info and r[h["shape_id"]]:
+                counts[info[:2]][r[h["shape_id"]]] += 1
+                names[info[:2]] = info[2]
+        best = {k: max(v, key=v.get) for k, v in counts.items()}
+        shapes = _load_shapes(zf, set(best.values()))
+    out, seen = defaultdict(list), set()
+    for (mode, short), sh in sorted(best.items()):
+        if sh in seen or sh not in shapes:
+            continue
+        seen.add(sh)
+        pts = [[round(a, 5), round(b, 5)] for a, b in _simplify(shapes[sh], tol=25.0)]
+        out[mode].append({"route": short, "name": names[(mode, short)], "pts": pts})
+    cache["network"] = dict(out)
+    if cache.get("feed") == zsig:
+        cache_path.write_text(json.dumps(cache))
+    return cache["network"]
