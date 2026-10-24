@@ -18,8 +18,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 TRANSFER_TAG = "(Touch on Transfer)"
-TOPUP_RE = re.compile(r"^(auto )?top ?up\s*\((.*)\)$", re.I)
-MONEY_RE = re.compile(r"(-)?\$\s*(-)?([\d,]+\.?\d*)")
+# Balance events in the From column, e.g. "Auto top up(Stop)", "Top Up( Eagle Farm Depot )"
+# (topped up with the driver; the row is also that trip), "Adjustment(Stop)", "Top up/Adjustment(Stop)".
+BALANCE_RE = re.compile(r"^(auto top ?up|top ?up/adjustment|adjustment|top ?up)\s*\((.*)\)$", re.I)
+MONEY_RE = re.compile(r"(-)?\$?\s*(-)?(\d[\d,]*\.?\d*)")
 
 
 def money(s):
@@ -44,10 +46,15 @@ def parse_time(day, s):
 
 
 def read_raw(raw_dir):
-    """Every *.csv under raw_dir, at any depth and with any folder naming."""
+    """Every *.csv under raw_dir, at any depth and with any folder naming.
+
+    Rows are keyed by their touch-on (date, time, from), so a trip that was still open in
+    one export and complete in a later one counts once; the most recently written file wins.
+    """
     rows, sources = {}, []
-    for path in sorted(raw_dir.rglob("*.csv")):
+    for path in sorted(raw_dir.rglob("*.csv"), key=lambda p: (p.stat().st_mtime, str(p))):
         sources.append(str(path.relative_to(raw_dir)))
+        seen = {}
         with open(path, newline="", encoding="utf-8-sig") as f:
             reader = csv.reader(f)
             next(reader, None)  # header: Date,Time,From,Time,To,Fare,Credit,Balance
@@ -55,9 +62,10 @@ def read_raw(raw_dir):
                 r = [c.strip() for c in r] + [""] * 8
                 if not r[0]:
                     continue
-                key = tuple(r[:8])
-                rows[key] = r[:8]
-    return list(rows.values()), sources
+                key = (r[0], r[1], r[2])
+                seen[key] = seen.get(key, 0) + 1  # keep genuine repeats within one file
+                rows[key + (seen[key],)] = r[:8]
+    return list(rows.values()), sorted(sources)
 
 
 def load_gtfs(path):
@@ -68,16 +76,34 @@ def load_gtfs(path):
 
 
 ABBREV = {"st": "street", "rd": "road", "fs": "farside", "f/s": "farside", "app": "approaching",
-          "kgs": "king george square", "dr": "drive", "tce": "terrace", "mt": "mt", "stn": "station"}
+          "kgs": "king george square", "dr": "drive", "dve": "drive", "tce": "terrace", "stn": "station",
+          "pk": "park", "hosp": "hospital"}
+# go card labels that share no words with their GTFS name
+ALIASES = {r"royal brisbane (&|and) womens hospital": "rbwh"}
+STOPWORDS = {"stop", "near", "at", "the", "opp", "op", "ib", "ob"}
+
+
+GENERIC = {"street", "road", "station", "busway", "bus", "ferry", "terminal", "drive", "terrace"}
+
+
+def is_platform(tok):
+    return re.fullmatch(r"p\d+[a-z]?", tok) is not None
 
 
 def norm_tokens(name):
     s = name.lower().replace("f/s", " farside ").replace("'", "")
-    toks = re.findall(r"[a-z]+|\d+[a-z]?", s)
+    s = re.sub(r"\(st (\d+\w?)\)", r"(stop \1)", s)  # "(St 144)" is stop 144, not a street
+    s = re.sub(r"platform (\w+)", r"p\1", s)          # platform numbers aren't stop numbers
+    s = re.sub(r"station, (\d+[a-z]?)$", r"station p\1", s)  # GTFS: "Queen Street station, 1a"
+    s = s.replace("bus station", "busway")
+    s = " ".join(ABBREV.get(t, t) for t in s.split())
+    for pat, alias in ALIASES.items():
+        s = re.sub(pat, alias, s)
+    toks = re.findall(r"\bp\d+[a-z]?\b|[a-z]+|\d+[a-z]?", s)
     out = []
     for t in toks:
         out.extend(ABBREV.get(t, t).split())
-    return set(out) - {"stop", "near", "at", "platform", "the"}
+    return set(out) - STOPWORDS
 
 
 def km(a, b):
@@ -95,11 +121,14 @@ def guess_stop(name, gtfs, known=()):
     best, best_score = None, 0.0
     for sid, r in gtfs.items():
         have = norm_tokens(r["stop_name"])
-        if not have & want:
-            continue
+        shared = have & want
+        if not {t for t in shared - GENERIC if not is_platform(t)}:
+            continue  # need a shared name word, not just "station" or a platform number
         score = len(have & want) / len(have | want)
         if nums and nums & have:
             score += 0.5
+        if any(is_platform(t) for t in shared):
+            score += 0.3
         score += 0.2 * difflib.SequenceMatcher(None, name.lower(), r["stop_name"].lower()).ratio()
         if known:
             here = (float(r["stop_lat"]), float(r["stop_lon"]))
@@ -158,23 +187,32 @@ def main():
     for date_s, on_s, frm, off_s, to, fare_s, credit_s, bal_s in raw:
         day = dt.datetime.strptime(date_s, "%d/%b/%Y").date()
         on = parse_time(day, on_s)
-        m = TOPUP_RE.match(frm)
+        time_unknown = on is None  # e.g. a penalty fare with no touch-on recorded
+        on = on or dt.datetime.combine(day, dt.time())
+        balance = money(bal_s)
+        m = BALANCE_RE.match(frm)
         if m:
+            kind = m.group(1).lower().replace(" ", "")
+            kind = "auto" if kind.startswith("auto") else "adjustment" if "adjustment" in kind else "manual"
+            fare = money(fare_s) or 0.0
             topups.append({"t": on.isoformat(), "stop": m.group(2).strip(), "amount": money(credit_s),
-                           "balance": money(bal_s), "auto": bool(m.group(1))})
-            continue
+                           "balance": round(balance + fare, 2) if balance is not None else None,
+                           "kind": kind, "auto": kind == "auto"})
+            if not to:
+                continue
+            frm = ""  # topped up with the driver: the boarding stop isn't recorded
         transfer = TRANSFER_TAG.lower() in frm.lower()
-        frm = re.sub(re.escape(TRANSFER_TAG), "", frm, flags=re.I).strip()
+        frm = re.sub(re.escape(TRANSFER_TAG), "", frm, flags=re.I).strip() or None
         failed = to.lower().startswith("failed to touch")
         off = None if failed else parse_time(day, off_s)
         if off and off < on:
             off += dt.timedelta(days=1)
         legs.append({
             "on": on.isoformat(), "off": off.isoformat() if off else None,
-            "from": frm, "to": None if failed else to,
-            "mins": round((off - on).total_seconds() / 60) if off else None,
-            "fare": money(fare_s) or 0.0, "balance": money(bal_s),
-            "transfer": transfer, "failedTouchOff": failed,
+            "from": frm, "to": None if failed else (to or None),
+            "mins": round((off - on).total_seconds() / 60) if off and not time_unknown else None,
+            "fare": money(fare_s) or 0.0, "balance": balance,
+            "transfer": transfer, "failedTouchOff": failed, "timeUnknown": time_unknown,
         })
 
     legs.sort(key=lambda l: l["on"])
@@ -188,7 +226,7 @@ def main():
         leg["journey"] = jid
 
     # Geocode every stop name we've seen; guess any new ones.
-    names = {l["from"] for l in legs} | {l["to"] for l in legs if l["to"]} | {t["stop"] for t in topups}
+    names = {l["from"] for l in legs if l["from"]} | {l["to"] for l in legs if l["to"]}
     new = match_new_stops(names, stop_map, gtfs)
     if new:
         args.stops.parent.mkdir(parents=True, exist_ok=True)

@@ -47,6 +47,9 @@
   const weekday = (d) => (d.getDay() + 6) % 7; // Mon = 0
   const mondayOf = (d) => { const m = new Date(d.getFullYear(), d.getMonth(), d.getDate()); m.setDate(m.getDate() - weekday(m)); return m; };
   const niceMax = (v) => { if (v <= 5) return Math.max(1, Math.ceil(v)); const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / (p / 2)) * (p / 2); };
+  const stopName = (n) => n || "Unknown stop"; // e.g. topped up with the driver, so no touch-on stop
+  const onTime = (l) => (l.timeUnknown ? "?" : hm(l.onD));
+  const TOPUP_LABEL = { auto: "auto top-up", manual: "top-up", adjustment: "adjustment" };
   const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
 
   // ---------- data ----------
@@ -85,7 +88,7 @@
       dayBox.append(b);
     });
     const counts = {};
-    legs.forEach((l) => { counts[l.from] = (counts[l.from] || 0) + 1; if (l.to) counts[l.to] = (counts[l.to] || 0) + 1; });
+    legs.forEach((l) => { [l.from, l.to].forEach((n) => { if (n) counts[n] = (counts[n] || 0) + 1; }); });
     Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([n, c]) => $("#stop").append(el("option", { value: n, text: `${n} (${c})` })));
     $("#stop").onchange = (e) => { state.stop = e.target.value; render(); };
     $("#from").onchange = (e) => { state.from = e.target.value || minDate; markPreset(null); render(); };
@@ -103,6 +106,7 @@
     const today = new Date();
     if (p === "all") { state.from = minDate; state.to = maxDate; }
     else if (p === "month") { state.from = ymd(new Date(today.getFullYear(), today.getMonth(), 1)); state.to = ymd(today); }
+    else if (p === "year") { state.from = ymd(new Date(today.getFullYear(), 0, 1)); state.to = ymd(today); }
     else { const f = new Date(today); f.setDate(f.getDate() - Number(p) + 1); state.from = ymd(f); state.to = ymd(today); }
     markPreset(p);
     render();
@@ -147,7 +151,7 @@
     const failed = rows.filter((l) => l.failedTouchOff).length;
     const transfers = rows.filter((l) => l.transfer).length;
     const spanDays = rows.length ? Math.round((parse(state.to) - parse(state.from)) / 864e5) + 1 : 0;
-    const tops = topups.filter((t) => ymd(t.d) >= state.from && ymd(t.d) <= state.to);
+    const tops = topups.filter((t) => t.kind !== "adjustment" && ymd(t.d) >= state.from && ymd(t.d) <= state.to);
     const tiles = [
       { label: "Journeys", value: journeys.size.toLocaleString(), sub: `${rows.length} legs, ${transfers} transfers`, hero: true },
       { label: "Spent on fares", value: money(spent), sub: journeys.size ? `${money(spent / journeys.size)} per journey` : "" },
@@ -192,11 +196,9 @@
     const s1 = css("--s1"), s2 = css("--s2"), surface = css("--surface");
     const pairs = new Map(), use = {};
     rows.forEach((l) => {
-      use[l.from] = use[l.from] || { on: 0, off: 0 };
-      use[l.from].on++;
-      if (!l.to) return;
-      use[l.to] = use[l.to] || { on: 0, off: 0 };
-      use[l.to].off++;
+      if (l.from) { use[l.from] = use[l.from] || { on: 0, off: 0 }; use[l.from].on++; }
+      if (l.to) { use[l.to] = use[l.to] || { on: 0, off: 0 }; use[l.to].off++; }
+      if (!l.from || !l.to) return;
       const k = pairKey(l.from, l.to);
       const p = pairs.get(k) || { a: l.from < l.to ? l.from : l.to, b: l.from < l.to ? l.to : l.from, ab: 0, ba: 0, mins: [] };
       l.from === p.a ? p.ab++ : p.ba++;
@@ -218,7 +220,7 @@
     // selected journey on top
     if (state.selJourney != null) {
       legs.filter((l) => l.journey === state.selJourney).forEach((l) => {
-        const A = stops[l.from], B = l.to && stops[l.to];
+        const A = l.from && stops[l.from], B = l.to && stops[l.to];
         if (A && B) mapLayer.addLayer(L.polyline([[A.lat, A.lon], [B.lat, B.lon]], { color: s2, weight: 6, opacity: 0.95 }));
       });
     }
@@ -243,36 +245,48 @@
   function renderCalendar(rows) {
     const box = $("#calendar");
     box.replaceChildren();
-    const start = mondayOf(parse(state.from)), end = parse(state.to);
+    const from = parse(state.from), to = parse(state.to);
     const perDay = {};
-    rows.forEach((l) => { const k = ymd(l.onD); perDay[k] = perDay[k] || []; perDay[k].push(l); });
-    const weeks = Math.max(1, Math.ceil(((end - start) / 864e5 + 1) / 7));
-    const W = box.clientWidth, left = 30, top = 16;
-    const cell = Math.max(8, Math.min(24, Math.floor((W - left) / weeks) - 2));
-    const gap = 2, step = cell + gap;
-    const s = svg("svg", { width: left + weeks * step, height: top + 7 * step + 4, role: "img", "aria-label": "Trips per day calendar" }, box);
-    [0, 2, 4, 6].forEach((i) => svg("text", { x: 0, y: top + i * step + cell - 2, text: DAYS[i] }, s));
+    rows.forEach((l) => { const k = ymd(l.onD); (perDay[k] = perDay[k] || []).push(l); });
+    const years = [];
+    for (let y = from.getFullYear(); y <= to.getFullYear(); y++) years.push(y);
+    // a single short range gets big cells; a year or more gets one 53-week row per year
+    const short = years.length === 1 && (to - from) / 864e5 < 200;
+    const first = short ? mondayOf(from) : null;
+    const cols = short ? Math.ceil(((to - first) / 864e5 + 1) / 7) : 53;
+    const W = box.clientWidth, left = short ? 30 : 64, gap = 2;
+    const cell = Math.max(6, Math.min(short ? 24 : 16, Math.floor((W - left) / cols) - gap)), step = cell + gap;
+    const blockH = 16 + 7 * step + 10;
+    const s = svg("svg", { width: left + cols * step, height: blockH * years.length, role: "img", "aria-label": "Trips per day calendar" }, box);
     const ramp = seqRamp(), empty0 = css("--seq-0");
     const maxN = Math.max(1, ...Object.values(perDay).map((a) => a.length));
-    let lastMonth = -1;
-    for (let d = new Date(start), i = 0; d <= end; d.setDate(d.getDate() + 1), i++) {
-      const w = Math.floor(i / 7), dow = weekday(d), k = ymd(d);
-      if (d.getDate() <= 7 && dow === 0 && d.getMonth() !== lastMonth) {
-        lastMonth = d.getMonth();
-        svg("text", { x: left + w * step, y: 10, text: MONTHS[d.getMonth()] }, s);
+    years.forEach((year, yi) => {
+      const top = yi * blockH + 16;
+      const start = short ? first : mondayOf(new Date(year, 0, 1));
+      if (!short) svg("text", { x: 0, y: top + 3 * step + cell - 2, class: "label", text: year }, s);
+      [0, 2, 4, 6].forEach((i) => svg("text", { x: short ? 0 : 34, y: top + i * step + cell - 2, text: DAYS[i][0] + (short ? DAYS[i].slice(1) : "") }, s));
+      const end = short ? to : new Date(year, 11, 31);
+      let lastMonth = -1;
+      for (let d = new Date(start), i = 0; d <= end; d.setDate(d.getDate() + 1), i++) {
+        const w = Math.floor(i / 7), dow = weekday(d), k = ymd(d);
+        if (d.getFullYear() === year && d.getMonth() !== lastMonth && dow === 0) {
+          lastMonth = d.getMonth();
+          svg("text", { x: left + w * step, y: top - 5, text: MONTHS[d.getMonth()] }, s);
+        }
+        if (d.getFullYear() !== year && !short) continue;
+        if (k < state.from || k > state.to) continue;
+        const list = perDay[k] || [];
+        const fill = list.length ? ramp[Math.min(ramp.length - 1, Math.floor((list.length / maxN) * (ramp.length - 1)))] : empty0;
+        const g = svg("g", {}, s);
+        svg("rect", { class: "mark", x: left + w * step, y: top + dow * step, width: cell, height: cell, rx: Math.min(3, cell / 4), fill }, g);
+        const date = new Date(d);
+        hoverable(g, (e) => showTip(e, fmtDate(date), list.length
+          ? [[`${list.length} leg${list.length > 1 ? "s" : ""}`, money(list.reduce((a, l) => a + l.fare, 0))], ...list.map((l) => [onTime(l), `${stopName(l.from)} → ${l.to || "no tap-off"}`])]
+          : [["No trips", ""]]));
+        g.style.cursor = "pointer";
+        g.addEventListener("click", () => setDay(k));
       }
-      if (k < state.from) continue;
-      const list = perDay[k] || [];
-      const fill = list.length ? ramp[Math.min(ramp.length - 1, Math.floor((list.length / maxN) * (ramp.length - 1)))] : empty0;
-      const g = svg("g", {}, s);
-      svg("rect", { class: "mark", x: left + w * step, y: top + dow * step, width: cell, height: cell, rx: 3, fill }, g);
-      const date = new Date(d);
-      hoverable(g, (e) => showTip(e, fmtDate(date), list.length
-        ? [[`${list.length} leg${list.length > 1 ? "s" : ""}`, money(list.reduce((a, l) => a + l.fare, 0))], ...list.map((l) => [hm(l.onD), `${l.from} → ${l.to || "no tap-off"}`])]
-        : [["No trips", ""]]));
-      g.style.cursor = "pointer";
-      g.addEventListener("click", () => setDay(k));
-    }
+    });
   }
 
   // ---------- weekday x hour heatmap ----------
@@ -281,6 +295,7 @@
     box.replaceChildren();
     if (!rows.length) return empty(box);
     const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+    rows = rows.filter((l) => !l.timeUnknown);
     rows.forEach((l) => grid[weekday(l.onD)][l.onD.getHours()]++);
     let h0 = 23, h1 = 0;
     rows.forEach((l) => { h0 = Math.min(h0, l.onD.getHours()); h1 = Math.max(h1, l.onD.getHours()); });
@@ -337,16 +352,19 @@
 
   function renderWeekly(rows) {
     const box = $("#weekly");
+    const monthly = (parse(state.to) - parse(state.from)) / 864e5 > 200;
+    $("#weeklyTitle").textContent = monthly ? "Trips per month" : "Trips per week";
     if (!rows.length) return empty(box);
-    const start = mondayOf(parse(state.from)), end = parse(state.to);
-    const byWeek = new Map();
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) byWeek.set(ymd(d), { d: new Date(d), v: 0, fare: 0 });
-    rows.forEach((l) => { const w = byWeek.get(ymd(mondayOf(l.onD))); if (w) { w.v++; w.fare += l.fare; } });
-    const data = [...byWeek.values()];
+    const bucket = (d) => (monthly ? new Date(d.getFullYear(), d.getMonth(), 1) : mondayOf(d));
+    const buckets = new Map();
+    for (let d = bucket(parse(state.from)); d <= parse(state.to); monthly ? d.setMonth(d.getMonth() + 1) : d.setDate(d.getDate() + 7))
+      buckets.set(ymd(d), { d: new Date(d), v: 0, fare: 0 });
+    rows.forEach((l) => { const b = buckets.get(ymd(bucket(l.onD))); if (b) { b.v++; b.fare += l.fare; } });
+    const data = [...buckets.values()];
     columnChart(box, data, {
-      label: (d) => `${d.d.getDate()} ${MONTHS[d.d.getMonth()]}`,
+      label: (d) => (monthly ? `${MONTHS[d.d.getMonth()]} ${String(d.d.getFullYear()).slice(2)}` : `${d.d.getDate()} ${MONTHS[d.d.getMonth()]}`),
       labelEvery: Math.max(1, Math.ceil(data.length / 6)),
-      tipHead: (d) => `Week of ${fmtDate(d.d)}`,
+      tipHead: (d) => (monthly ? `${MONTHS[d.d.getMonth()]} ${d.d.getFullYear()}` : `Week of ${fmtDate(d.d)}`),
       tipRows: (d) => [[`${d.v} legs`, ""], [money(d.fare), "fares"]],
     });
   }
@@ -373,7 +391,7 @@
     box.replaceChildren();
     const pairs = new Map();
     rows.forEach((l) => {
-      if (!l.to) return;
+      if (!l.from || !l.to) return;
       const k = pairKey(l.from, l.to);
       const p = pairs.get(k) || { a: l.from < l.to ? l.from : l.to, b: l.from < l.to ? l.to : l.from, n: 0, ab: 0, ba: 0 };
       p.n++; l.from === p.a ? p.ab++ : p.ba++;
@@ -418,8 +436,10 @@
       svg("line", { class: f ? "grid-line" : "axis-line", x1: left, x2: W - right, y1: y(v), y2: y(v) }, s);
       svg("text", { x: left - 6, y: y(v) + 4, "text-anchor": "end", text: `$${Math.round(v)}` }, s);
     });
-    for (let d = new Date(pts[0].d.getFullYear(), pts[0].d.getMonth() + 1, 1); d <= pts[pts.length - 1].d; d.setMonth(d.getMonth() + 1))
-      svg("text", { x: x(+d), y: H - 6, "text-anchor": "middle", text: MONTHS[d.getMonth()] }, s);
+    const months = (t1 - t0) / (30.4 * 864e5), every = Math.max(1, Math.ceil(months / Math.max(4, (W - left) / 70)));
+    for (let d = new Date(pts[0].d.getFullYear(), pts[0].d.getMonth() + 1, 1), i = 0; d <= pts[pts.length - 1].d; d.setMonth(d.getMonth() + 1), i++)
+      if (i % every === 0)
+        svg("text", { x: x(+d), y: H - 6, "text-anchor": "middle", text: d.getMonth() === 0 || months > 12 && every > 1 ? `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : MONTHS[d.getMonth()] }, s);
     // step line: balance holds until the next event
     let dPath = `M${x(+pts[0].d)},${y(pts[0].v)}`;
     for (let i = 1; i < pts.length; i++) dPath += `H${x(+pts[i].d)}V${y(pts[i].v)}`;
@@ -437,7 +457,8 @@
       cross.setAttribute("x1", x(+best.d)); cross.setAttribute("x2", x(+best.d)); cross.setAttribute("visibility", "visible");
       dot.setAttribute("cx", x(+best.d)); dot.setAttribute("cy", y(best.v)); dot.setAttribute("visibility", "visible");
       showTip(e, `${fmtDate(best.d)} ${hm(best.d)}`, [[money(best.v), "balance", s1],
-        best.kind === "topup" ? [`+${money(best.t.amount)}`, `${best.t.auto ? "auto " : ""}top-up at ${best.t.stop}`] : [money(best.l.fare), `${best.l.from} → ${best.l.to || "no tap-off"}`]]);
+        best.kind === "topup" ? [`${best.t.amount > 0 ? "+" : ""}${money(best.t.amount)}`, `${TOPUP_LABEL[best.t.kind] || "top-up"} at ${best.t.stop}`]
+          : [money(best.l.fare), `${stopName(best.l.from)} → ${best.l.to || "no tap-off"}`]]);
     });
     hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); hideTip(); });
   }
@@ -456,10 +477,10 @@
       const tr = el("tr", { class: (l.transfer ? "transfer " : "") + (l.journey === state.selJourney ? "sel" : "") });
       const toCell = el("td", { text: l.to || "" });
       if (l.failedTouchOff) toCell.append(el("span", { class: "tag bad", text: "failed touch-off" }));
-      const fromCell = el("td", { text: l.from });
+      const fromCell = el("td", { text: stopName(l.from) });
       if (l.transfer) fromCell.append(el("span", { class: "tag", text: "transfer" }));
       if (stops[l.from]?.auto || stops[l.to]?.auto) toCell.append(el("span", { class: "tag", text: "stop unverified" }));
-      tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: hm(l.onD) }), el("td", { text: hm(l.offD) }),
+      tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }), el("td", { text: hm(l.offD) }),
         fromCell, toCell, el("td", { class: "num", text: l.mins ?? "" }), el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: money(l.balance) }));
       tr.onclick = () => { state.selJourney = state.selJourney === l.journey ? null : l.journey; renderMap(filtered()); renderTable(filtered()); };
       return tr;

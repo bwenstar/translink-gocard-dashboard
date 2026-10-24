@@ -21,6 +21,8 @@
     <button data-preset="30">Last 30 days</button>
     <button data-preset="90">Last 90 days</button>
     <button data-preset="month">This month</button>
+    <button data-preset="year">This year</button>
+    <button data-preset="365">Last 12 months</button>
   </div>
   <label>From <input type="date" id="from"></label>
   <label>To <input type="date" id="to"></label>
@@ -49,7 +51,7 @@
     </article>
 
     <article class="card">
-      <header><h2>Trips per week</h2><p class="muted">Legs, including transfers</p></header>
+      <header><h2 id="weeklyTitle">Trips per week</h2><p class="muted">Legs, including transfers</p></header>
       <div id="weekly" class="chart"></div>
     </article>
 

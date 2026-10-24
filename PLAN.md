@@ -23,6 +23,7 @@ data/
   gtfs/stops.txt          # Translink GTFS stop list, cached (gitignored)
 scripts/
   fetch_gtfs.py           # downloads Translink's public GTFS feed (stop coordinates)
+  fetch_history.py        # logs in to go card online, downloads CSVs into data/raw/
   build.py                # raw CSVs -> dashboard/data.js
 dashboard/
   index.html, app.js, style.css   # static dashboard, open index.html directly
@@ -44,6 +45,24 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - Stop names are go card labels (for example `Cultural Centre station - Platform 2`), which don't
   match GTFS names (`Cultural Centre station, platform 2`), hence `data/stops.json`.
 - Every value has stray leading/trailing spaces, and money is formatted like `$ 0.50`.
+- Older history has more row types:
+  - `Top Up( Eagle Farm Depot )`: topped up with the driver. One row is both the top-up
+    (Credit `30.00`, no `$`) and that trip (To/Fare filled). The "depot" is the bus's depot,
+    so the boarding stop is unknown.
+  - `Adjustment(<stop>)` / `Top up/Adjustment(<stop>)`: signed amounts in `Credit` (for example a reversed top-up).
+  - A penalty row can have no touch-on time or stop at all (`07/Mar/2024,,,Unknown,Failed to touch Off,$ 5.00`).
+
+## How the site works (for fetch_history.py)
+
+- Login: `POST https://gocard.translink.com.au/webtix/welcome/welcome.do` with
+  `cardOps=Display`, `cardNum=<16 digits>`, `pass=<password>`. No CSRF token or captcha.
+  Success redirects to `.../online/summary`. Plain `requests` works, no browser needed.
+- Export: `GET /webtix/cardinfo/history.do?csvExport=yes&startDate=DD/MM/YYYY&endDate=DD/MM/YYYY`
+  returns the same CSV as the "Export data to CSV file" link.
+- Ranges over ~6 months come back as an **empty body** (not an error page), so the script
+  uses 180-day windows. Windows before a card's first trip return only a header row.
+- The site sits behind Imperva/Incapsula. One session, a 2 s delay between requests and a
+  single login attempt per run (never retry a failed login, which risks locking the account).
 
 ## Phases
 
@@ -56,14 +75,21 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       weekly trips, balance over time, top routes, trip-duration histogram, full trip table
 - [ ] Ideas: compare cost against the old fare or a monthly pass, CO₂ vs. driving, "streaks"
 
-### Phase 2 — automated retrieval
-- [ ] Inspect the history page: login form fields, CSRF tokens, the export request (date range params)
-- [ ] `scripts/fetch_history.py`: log in with `.env` credentials, request each 6-month window
-      back to the card's start, save to `data/raw/<YYMMDD>-<YYMMDD>/Travel_history.csv`
-      - first try plain `requests` + session cookies; fall back to Playwright if the site needs JS
-      - be polite: one session, small delays, no parallel requests
-- [ ] Incremental mode: only fetch from the latest date already held (overlap a few days, de-dupe handles it)
-- [ ] Multiple cards, if the account has more than one
+### Phase 2 — automated retrieval  ✅
+- [x] Inspect the site: login form, export URL, 6-month limit (see "How the site works")
+- [x] `scripts/fetch_history.py`: logs in with `.env` credentials and saves 180-day windows to
+      `data/raw/<YYMMDD>-<YYMMDD>/Travel_history.csv`. Uses plain `requests`.
+- [x] `--all` walks back to the card's first trip. The default is incremental: from 7 days before
+      the newest trip held, to today. `--from/--to` for explicit ranges.
+- [x] `build.py` de-dupes on the touch-on (date, time, stop), newest file wins, so overlapping and
+      re-downloaded windows never double count. It also parses driver top-ups, adjustments and
+      penalty rows with no time.
+- [x] Stop matcher: platform-aware, `(St 144)` = stop 144, aliases (RBWH). 84 new stops from the
+      full history matched, 7 approximate ones left flagged in `stops.json`.
+- [x] Dashboard handles multi-year ranges: a calendar row per year, monthly bars past ~6 months,
+      "This year" and "Last 12 months" presets
+- [ ] Multiple cards, if the account has more than one (one card per login on this site, so
+      probably several `.env` profiles)
 
 ### Phase 3 — run it on a schedule
 - [ ] One command: `make update` = fetch history, then build
@@ -78,8 +104,10 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 ## How to run (current)
 
 ```bash
-python3 scripts/fetch_gtfs.py   # once, or when stops look stale
-python3 scripts/build.py        # after adding a new export to data/raw/
+python3 scripts/fetch_gtfs.py           # once, or when stops look stale
+python3 scripts/fetch_history.py --all  # first time: the whole history
+python3 scripts/fetch_history.py        # afterwards: just what's new
+python3 scripts/build.py                # rebuild dashboard/data.js
 xdg-open dashboard/index.html   # or: python3 -m http.server -d dashboard
 ```
 
