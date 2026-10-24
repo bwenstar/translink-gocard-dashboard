@@ -163,16 +163,27 @@
   // ---------- map ----------
   let map, tileLayer, mapLayer;
   function initMap() {
-    map = L.map("map", { scrollWheelZoom: false, zoomSnap: 0.25 });
-    // OSM standard tiles; dark mode is a CSS filter on the tile pane (see style.css).
-    tileLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+    map = L.map("map", { scrollWheelZoom: false, maxZoom: 16 });
+    // Esri gray canvas tiles: no API key, and unlike tile.openstreetmap.org they don't
+    // reject pages opened from file:// (no Referer). Base + label layers, per theme.
+    const dark = matchMedia("(prefers-color-scheme: dark)");
+    const esri = (layer) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
+    const setTiles = () => {
+      if (tileLayer) tileLayer.remove();
+      const v = dark.matches ? "Dark" : "Light";
+      tileLayer = L.layerGroup([
+        L.tileLayer(esri(`World_${v}_Gray_Base`), {
+          attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
+          maxZoom: 16,
+        }),
+        L.tileLayer(esri(`World_${v}_Gray_Reference`), { maxZoom: 16 }),
+      ]).addTo(map);
+    };
+    setTiles();
+    dark.addEventListener("change", () => { setTiles(); render(); });
     mapLayer = L.layerGroup().addTo(map);
     const pts = Object.values(stops).map((s) => [s.lat, s.lon]);
-    if (pts.length) map.fitBounds(pts, { padding: [30, 30] });
+    if (pts.length) map.fitBounds(pts, { padding: [16, 16] });
     else map.setView([-27.47, 153.03], 12);
   }
 

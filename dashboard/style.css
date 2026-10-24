@@ -99,13 +99,8 @@ select { max-width: 240px; }
   .span-2 { grid-column: span 1; }
 }
 
-#map { height: 460px; border-radius: 8px; background: var(--seq-0); }
+#map { height: 580px; border-radius: 8px; background: var(--seq-0); }
 .leaflet-container { font: inherit; }
-.leaflet-tile-pane { filter: grayscale(0.6) opacity(0.85); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .leaflet-tile-pane { filter: grayscale(1) invert(1) brightness(0.75) contrast(0.9); }
-}
-:root[data-theme="dark"] .leaflet-tile-pane { filter: grayscale(1) invert(1) brightness(0.75) contrast(0.9); }
 .leaflet-tooltip { font-size: 12px; }
 
 .chart { width: 100%; position: relative; }
