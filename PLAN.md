@@ -1,4 +1,4 @@
-# go card travel tracker — project plan
+# translink-gocard-dashboard — project plan
 
 Track and visualise public transport usage from Translink go card travel history
 (<https://gocard.translink.com.au/webtix/tickets-and-fares/go-card/online/history>).
@@ -117,6 +117,15 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       refuse the `.env.example` placeholder card
 - [x] Leaflet loaded with SRI hashes; README "Security & privacy" lists every network request
 - [ ] Never put personal examples (your stops, card digits, dates) in committed docs. Grep before pushing.
+
+### Resilience to site changes
+- [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
+- [x] Every run checks the login form before sending credentials and the CSV header of every download
+- [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
+- [x] `tests/`: parser (all row types), master merge, site-contract checks, stop matching
+- [ ] Re-run `--check-site` for the 6-month limit: the 2026-10-24 check reported a non-empty 400-day
+      reply (the old behaviour was an empty body), and the follow-up probe timed out. The check now
+      tests for rows older than 180 days.
 
 ### Phase 3 — run it on a schedule
 - [ ] One command: `make update` = fetch history, then build

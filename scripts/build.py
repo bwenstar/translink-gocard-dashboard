@@ -159,28 +159,8 @@ def match_new_stops(names, stop_map, gtfs):
     return new
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
-                    help="master travel history from fetch_history.py (default: data/history.csv)")
-    ap.add_argument("--stops", type=pathlib.Path, default=ROOT / "data" / "stops.json",
-                    help="go card stop name -> GTFS stop_id map, created if missing (default: data/stops.json)")
-    ap.add_argument("--gtfs", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "stops.txt",
-                    help="GTFS stops.txt (default: data/gtfs/stops.txt)")
-    ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip",
-                    help="full GTFS feed for route paths; skipped if missing (default: data/gtfs/SEQ_GTFS.zip)")
-    ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
-                    help="generated dashboard data file (default: dashboard/data.js)")
-    args = ap.parse_args()
-
-    master = Master(args.history)
-    raw = list(master.rows.values())
-    if not raw:
-        sys.exit(f"No rows in {args.history} - run scripts/fetch_history.py "
-                 f"(or fetch_history.py --import data/raw to use exports you already have)")
-    gtfs = load_gtfs(args.gtfs)
-    stop_map = json.loads(args.stops.read_text()) if args.stops.exists() else {}
-
+def parse_legs(raw):
+    """go card CSV rows -> (legs, topups), sorted, with transfer legs grouped into journeys."""
     legs, topups = [], []
     for date_s, on_s, frm, off_s, to, fare_s, credit_s, bal_s in raw:
         day = dt.datetime.strptime(date_s, "%d/%b/%Y").date()
@@ -222,6 +202,33 @@ def main():
         if not (leg["transfer"] and i > 0):
             jid += 1
         leg["journey"] = jid
+    return legs, topups
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
+                    help="master travel history from fetch_history.py (default: data/history.csv)")
+    ap.add_argument("--stops", type=pathlib.Path, default=ROOT / "data" / "stops.json",
+                    help="go card stop name -> GTFS stop_id map, created if missing (default: data/stops.json)")
+    ap.add_argument("--gtfs", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "stops.txt",
+                    help="GTFS stops.txt (default: data/gtfs/stops.txt)")
+    ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip",
+                    help="full GTFS feed for route paths; skipped if missing (default: data/gtfs/SEQ_GTFS.zip)")
+    ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
+                    help="generated dashboard data file (default: dashboard/data.js)")
+    args = ap.parse_args()
+
+    master = Master(args.history)
+    raw = list(master.rows.values())
+    if not raw:
+        sys.exit(f"No rows in {args.history} - run scripts/fetch_history.py "
+                 f"(or fetch_history.py --import data/raw to use exports you already have)")
+    gtfs = load_gtfs(args.gtfs)
+    stop_map = json.loads(args.stops.read_text()) if args.stops.exists() else {}
+
+    legs, topups = parse_legs(raw)
+    jid = legs[-1]["journey"] if legs else -1
 
     # Geocode every stop name we've seen; guess any new ones.
     names = {l["from"] for l in legs if l["from"]} | {l["to"] for l in legs if l["to"]}

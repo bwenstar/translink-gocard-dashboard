@@ -1,4 +1,4 @@
-# go card travel tracker
+# translink-gocard-dashboard
 
 Download your [Translink](https://translink.com.au) go card travel history and explore it
 on a local dashboard: trips on a map, a calendar, when you travel, top routes, time on board,
@@ -99,6 +99,7 @@ only read from `.env`, never from the environment, where it's usually your OS lo
 | `fetch_history.py --years 6` | The last N years |
 | `fetch_history.py --from 2024-01-01 --to 2025-06-30` | An explicit range of any length (`YYYY-MM-DD` or `DD/MM/YYYY`; `--to` defaults to today) |
 | `fetch_history.py --import PATH [PATH ...]` | No download: merges CSV files or folders you exported by hand |
+| `fetch_history.py --check-site` | No download: checks the site still works as recorded in `docs/site-contract.json` (see [If the site changes](#if-the-site-changes)) |
 
 Options:
 
@@ -166,6 +167,10 @@ scripts/
   history.py                master file: parse, merge/de-dupe, save
   build.py                  history.csv -> dashboard/data.js, stop matching
   routes.py                 likely route per trip and its path, from the GTFS timetable
+docs/
+  site-contract.json        how go card online works (login form, export, CSV format), checked every run
+tests/
+  test_parsing.py           parser, merge and site-check tests (python3 -m unittest discover tests)
   fetch_gtfs.py             Translink GTFS stop list
 data/
   history.csv               master travel history (gitignored)
@@ -173,6 +178,7 @@ data/
   stops.json                your stop name -> GTFS stop_id map (gitignored)
   stops.example.json        format example
   gtfs/                     GTFS feed and route-path cache (gitignored)
+  site-snapshots/           private raw pages saved by --check-site (gitignored)
 dashboard/
   index.html, app.js, style.css
   data.js                   generated from your history (gitignored)
@@ -272,11 +278,39 @@ These files are personal and are gitignored. Don't commit them:
 | `data/stops.json` | the stops you use, which reveal roughly where you live and work |
 | `dashboard/data.js` | all of the above, compiled |
 | `data/gtfs/paths_cache.json` | the stop pairs you travel between |
+| `data/site-snapshots/` | raw go card online pages, including your card details and balance |
 
 Before pushing a fork, check `git status` and
 `git log --all --name-only --format= | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
 The second command should print nothing. Also check your own notes and commit messages for stop
 names or card digits before publishing a fork.
+
+## If the site changes
+
+This project depends on go card online's website, which Translink can change at any time. To make
+that easy to spot and fix:
+
+- **`docs/site-contract.json`** records exactly what the code relies on: the login form's address
+  and fields, the export address and its parameters, the 6-month limit, the CSV columns and the
+  formats of every row type. It's a structural description, not a copy of Translink's pages.
+- **Every run checks it.** Before sending your credentials, `fetch_history.py` checks the login
+  form still has the expected fields, so it never types your password into a form it doesn't
+  recognise. Every download's CSV columns are checked too. On a mismatch it stops and says exactly
+  what changed, e.g. `login form has new fields: csrf (a captcha or token?)`. It never silently
+  saves bad data.
+- **`fetch_history.py --check-site`** runs the full check without downloading anything: login form,
+  login, history page, a one-week export, and whether the 6-month limit still applies. It also
+  saves the raw pages to `data/site-snapshots/<date>/`. They're private and gitignored because they
+  include your card details. Run it after a failure, or now and then, so whoever fixes the project
+  later can compare old and new pages.
+- **Tests** (`python3 -m unittest discover tests`) cover every row type and the site checks, using
+  made-up sample data, so the parser can be changed safely.
+
+To fix a break: run `--check-site`, compare the new pages with an old snapshot, update
+`fetch_history.py` (and `build.py` if the CSV changed) and `docs/site-contract.json` together.
+Then run the tests. If go card online disappears entirely, you can still export CSVs by hand from
+whatever replaces it and use `--import`. Everything you've already downloaded stays in
+`data/history.csv`.
 
 ## Limitations
 

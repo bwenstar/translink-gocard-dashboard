@@ -12,6 +12,12 @@ Modes:
   --years N      the last N years, e.g. --years 6 (any length; split into windows)
   --from/--to    an explicit range of any length (DD/MM/YYYY or YYYY-MM-DD)
   --import PATH  merge CSVs you exported by hand (files or folders) without logging in
+  --check-site   check the live site still works the way docs/site-contract.json records,
+                 and save a private snapshot of its pages to data/site-snapshots/
+
+Every run checks the login form before sending credentials and the CSV columns of every
+download against docs/site-contract.json, and stops with a clear message if Translink
+has changed something.
 
 Credentials: GOCARD_CARD / GOCARD_PASSWORD from the environment, else USERNAME /
 PASSWORD (or GOCARD_CARD / GOCARD_PASSWORD) from .env. USERNAME is deliberately not
@@ -24,10 +30,12 @@ are never printed, logged, saved anywhere else, or sent to any other site.
 import argparse
 import datetime as dt
 import getpass
+import json
 import os
 import pathlib
 import sys
 import time
+from html.parser import HTMLParser
 from urllib.parse import urlparse
 
 import requests
@@ -42,6 +50,9 @@ WINDOW_DAYS = 180
 OVERLAP_DAYS = 7
 DELAY_S = 2.0
 HOST = "gocard.translink.com.au"
+CONTRACT = json.loads((ROOT / "docs" / "site-contract.json").read_text())
+SITE_CHANGED = ("Translink's site has changed since docs/site-contract.json was written ({}). "
+                "Run: python3 scripts/fetch_history.py --check-site, and see README 'If the site changes'.")
 EXAMPLE_CARD = "0123456789012345"  # the placeholder in .env.example
 UA = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
 
@@ -82,10 +93,71 @@ def credentials(env_path, ask=False):
     return card, pw
 
 
-def login(card, pw):
+class _Forms(HTMLParser):
+    """Collects each <form>'s attributes and its named inputs."""
+    def __init__(self):
+        super().__init__()
+        self.forms, self._cur = {}, None
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "form":
+            self._cur = {"method": (a.get("method") or "get").lower(), "action": a.get("action"), "fields": {}}
+            self.forms[a.get("id") or a.get("name") or f"form{len(self.forms)}"] = self._cur
+        elif tag in ("input", "select", "textarea") and self._cur is not None and a.get("name"):
+            f = {"type": (a.get("type") or tag).lower()}
+            if f["type"] == "hidden":
+                f["value"] = a.get("value")
+            self._cur["fields"][a["name"]] = f
+
+    def handle_endtag(self, tag):
+        if tag == "form":
+            self._cur = None
+
+
+def login_form_problems(html):
+    """Differences between the live login form and the contract. Empty list = unchanged."""
+    want = CONTRACT["login"]
+    p = _Forms()
+    p.feed(html)
+    form = p.forms.get(want["form_id"])
+    if form is None:
+        return [f'no form with id "{want["form_id"]}" on the login page']
+    out = []
+    if form["method"] != want["method"]:
+        out.append(f'login form method is {form["method"]}, expected {want["method"]}')
+    if form["action"] != want["action"]:
+        out.append(f'login form posts to {form["action"]}, expected {want["action"]}')
+    for name, spec in want["fields"].items():
+        got = form["fields"].get(name)
+        if got is None:
+            out.append(f'login form has no "{name}" field')
+        elif got != spec:
+            out.append(f'login field "{name}" is {got}, expected {spec}')
+    extra = set(form["fields"]) - set(want["fields"])
+    if extra:
+        out.append(f"login form has new fields: {', '.join(sorted(extra))} (a captcha or token?)")
+    return out
+
+
+def header_problem(text):
+    """None if the CSV's header matches the contract, else a description."""
+    first = next((l for l in text.splitlines() if l.strip()), "")
+    got = [c.strip() for c in first.split(",")]
+    want = CONTRACT["export"]["csv_header"]
+    return None if got == want else f"CSV columns are {got}, expected {want}"
+
+
+def login(card, pw, snapshot=None):
     s = requests.Session()
     s.headers["User-Agent"] = UA
-    s.get(LOGIN_URL, timeout=30).raise_for_status()
+    page = s.get(LOGIN_URL, timeout=30)
+    page.raise_for_status()
+    if snapshot:
+        snapshot("login.html", page.text)
+    problems = login_form_problems(page.text)
+    if problems:  # never type credentials into a form we don't recognise
+        sys.exit(SITE_CHANGED.format("; ".join(problems)))
     r = s.post(LOGIN_URL, data={"cardOps": "Display", "cardNum": card, "pass": pw},
                headers={"Referer": LOGIN_URL}, timeout=30)
     r.raise_for_status()
@@ -94,6 +166,8 @@ def login(card, pw):
     if 'id="login-form"' in r.text or "/online/summary" not in r.url:
         sys.exit("Login failed - check the card number and password in .env "
                  "(stopping now to avoid locking the account)")
+    if snapshot:
+        snapshot("after-login.html", r.text)
     return s
 
 
@@ -111,10 +185,13 @@ def export(s, start, end):
     r.raise_for_status()
     text = r.content.decode("utf-8-sig", errors="replace")
     if "<html" in text[:500].lower():
-        sys.exit("Got an HTML page instead of CSV - the session may have expired or the site changed")
+        sys.exit(SITE_CHANGED.format("the export returned a web page instead of CSV"))
     lines = [l for l in text.splitlines() if l.strip()]
     if not lines:
         return None
+    problem = header_problem(text)
+    if problem:
+        sys.exit(SITE_CHANGED.format(problem))
     return text, len(lines) - 1
 
 
@@ -143,6 +220,52 @@ def windows_back(start, end):
         end = w0 - dt.timedelta(days=1)
 
 
+def check_site(args):
+    """Log in, fetch the history page and a one-week export, compare all of it with the contract,
+    and keep the raw pages in a private, gitignored snapshot folder for whoever fixes it later."""
+    folder = args.raw.parent / "site-snapshots" / dt.date.today().isoformat()
+    folder.mkdir(parents=True, exist_ok=True)
+
+    def snapshot(name, text):
+        (folder / name).write_text(text, encoding="utf-8")
+
+    card, pw = credentials(args.env, args.ask)
+    print(f"Checking {BASE} against docs/site-contract.json (captured {CONTRACT['captured']})")
+    s = login(card, pw, snapshot)  # exits with the differences if the login form changed
+    print("  login form and login: OK")
+    try:
+        time.sleep(DELAY_S)
+        page = s.get(EXPORT_URL, timeout=60)
+        snapshot("history.html", page.text)
+        if "csvExport" not in page.text:
+            print("  history page: no CSV export link found - the export may have moved")
+        else:
+            print("  history page: export link present")
+        time.sleep(DELAY_S)
+        end = dt.date.today()
+        res = export(s, end - dt.timedelta(days=6), end)  # exits if the columns changed
+        print(f"  CSV export: OK ({res[1] if res else 0} rows in the last week, columns as expected)")
+        time.sleep(DELAY_S)
+        too_long = export(s, end - dt.timedelta(days=400), end)
+        cutoff = end - dt.timedelta(days=WINDOW_DAYS)
+        old = [r for r in parse_rows(too_long[0].splitlines())
+               if dt.datetime.strptime(r[0], "%d/%b/%Y").date() < cutoff] if too_long else []
+        if too_long is None:
+            print("  6-month limit: unchanged (a 400-day range comes back empty)")
+        elif old:
+            print(f"  6-month limit: a 400-day range returned {len(old)} rows older than {WINDOW_DAYS} days "
+                  f"- the limit may have been lifted (WINDOW_DAYS could be raised)")
+        else:
+            print(f"  6-month limit: a 400-day range returned {too_long[1]} rows but none older than "
+                  f"{WINDOW_DAYS} days - still limited, just answered differently (180-day windows still work)")
+    finally:
+        logout(s)
+    (folder / "README.txt").write_text(
+        "Raw pages from go card online, saved by fetch_history.py --check-site.\n"
+        "They include your card details and balance: keep them private (data/ is gitignored).\n")
+    print(f"All checks passed. Raw pages saved privately to {folder}")
+
+
 def import_files(paths, master):
     files = [f for p in paths for f in ([p] if p.is_file() else sorted(p.rglob("*.csv")))]
     if not files:
@@ -153,11 +276,21 @@ def import_files(paths, master):
 
 
 def main():
+    try:
+        run()
+    except requests.RequestException as e:
+        sys.exit(f"Couldn't reach go card online ({type(e).__name__}). The site may be down or "
+                 f"rate-limiting; try again later. Anything downloaded before the error was kept.")
+
+
+def run():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--all", action="store_true", help="fetch the whole history")
     mode.add_argument("--years", type=float, help="fetch the last N years")
     mode.add_argument("--from", dest="start", type=parse_date, help="start of an explicit range")
+    mode.add_argument("--check-site", action="store_true",
+                      help="check the site against docs/site-contract.json and save a private snapshot")
     mode.add_argument("--import", dest="imports", type=pathlib.Path, nargs="+", metavar="PATH",
                       help="merge local CSV exports (files or folders) into the master, no download")
     ap.add_argument("--to", dest="end", type=parse_date, help="end of the range (default: today)")
@@ -170,6 +303,8 @@ def main():
     ap.add_argument("--ask", action="store_true", help="prompt for the password instead of reading it")
     args = ap.parse_args()
 
+    if args.check_site:
+        return check_site(args)
     master = Master(args.history)
     before = len(master.rows)
     if args.imports:

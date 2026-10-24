@@ -1,0 +1,37 @@
+{
+  "_comment": "How go card online worked when this project was written: the parts fetch_history.py depends on. A structural fingerprint only (no copied pages, no personal data). fetch_history.py checks the live site against it on every run, and `fetch_history.py --check-site` reports any differences. If Translink changes the site, update the code and this file together.",
+  "captured": "2026-10-24",
+  "base": "https://gocard.translink.com.au/webtix",
+  "login": {
+    "page": "/welcome/welcome.do",
+    "form_id": "login-form",
+    "method": "post",
+    "action": "/webtix/welcome/welcome.do",
+    "fields": {
+      "cardOps": {"type": "hidden", "value": "Display"},
+      "cardNum": {"type": "text"},
+      "pass": {"type": "password"}
+    },
+    "success_url_contains": "/online/summary",
+    "logout": "/welcome/welcome.do?logout=true"
+  },
+  "export": {
+    "page": "/cardinfo/history.do",
+    "params": {"csvExport": "yes", "startDate": "DD/MM/YYYY", "endDate": "DD/MM/YYYY"},
+    "max_window_days": 180,
+    "too_long_range": "empty response body (not an error page)",
+    "csv_header": ["Date", "Time", "From", "Time", "To", "Fare", "Credit", "Balance"],
+    "date_format": "27/Apr/2026",
+    "time_format": "17:20 PM (24-hour clock with a redundant AM/PM suffix)",
+    "money_format": "$ 0.50 (driver top-up credits have no $: 30.00)"
+  },
+  "row_types": {
+    "trip": "From/To are stop names, Fare is set",
+    "transfer": "From ends with '(Touch on Transfer)'",
+    "auto_top_up": "From = 'Auto top up(<stop>)', amount in Credit",
+    "driver_top_up": "From = 'Top Up( <depot> )', amount in Credit; To/Fare make it a trip too",
+    "adjustment": "From = 'Adjustment(<stop>)' or 'Top up/Adjustment(<stop>)', signed Credit",
+    "failed_touch_off": "To = 'Failed to touch Off', arrival time 'Unknown'; may have no time or stop"
+  },
+  "protection": "Imperva/Incapsula CDN; plain HTTPS requests with a browser User-Agent work, no captcha"
+}
