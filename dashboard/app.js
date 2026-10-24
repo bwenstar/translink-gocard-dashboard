@@ -91,6 +91,8 @@
     legs.forEach((l) => { [l.from, l.to].forEach((n) => { if (n) counts[n] = (counts[n] || 0) + 1; }); });
     Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([n, c]) => $("#stop").append(el("option", { value: n, text: `${n} (${c})` })));
     $("#stop").onchange = (e) => { state.stop = e.target.value; render(); };
+    $("#straight").onchange = () => renderMap(filtered());
+    if (!D.paths || !Object.keys(D.paths).length) $("#straight").parentElement.hidden = true;
     $("#from").onchange = (e) => { state.from = e.target.value || minDate; markPreset(null); render(); };
     $("#to").onchange = (e) => { state.to = e.target.value || maxDate; markPreset(null); render(); };
     document.querySelectorAll("[data-preset]").forEach((b) => (b.onclick = () => applyPreset(b.dataset.preset)));
@@ -194,34 +196,40 @@
   function renderMap(rows) {
     mapLayer.clearLayers();
     const s1 = css("--s1"), s2 = css("--s2"), surface = css("--surface");
-    const pairs = new Map(), use = {};
+    const use = {}, lines = new Map();
+    const straight = !D.paths || $("#straight").checked;
     rows.forEach((l) => {
       if (l.from) { use[l.from] = use[l.from] || { on: 0, off: 0 }; use[l.from].on++; }
       if (l.to) { use[l.to] = use[l.to] || { on: 0, off: 0 }; use[l.to].off++; }
-      if (!l.from || !l.to) return;
-      const k = pairKey(l.from, l.to);
-      const p = pairs.get(k) || { a: l.from < l.to ? l.from : l.to, b: l.from < l.to ? l.to : l.from, ab: 0, ba: 0, mins: [] };
-      l.from === p.a ? p.ab++ : p.ba++;
-      if (l.mins != null) p.mins.push(l.mins);
-      pairs.set(k, p);
+      if (!l.from || !l.to || !stops[l.from] || !stops[l.to]) return;
+      // one line per route path; legs with no timetabled match (or in straight mode) per stop pair
+      const k = !straight && l.path ? l.path : pairKey(l.from, l.to);
+      const ln = lines.get(k) || { pts: legPoints(l, straight), routed: !straight && !!l.path, n: 0, trips: new Map(), routes: new Map(), mins: [] };
+      ln.n++;
+      const t = `${l.from} → ${l.to}`;
+      ln.trips.set(t, (ln.trips.get(t) || 0) + 1);
+      if (l.route) ln.routes.set(l.route, (ln.routes.get(l.route) || 0) + 1);
+      if (l.mins != null) ln.mins.push(l.mins);
+      lines.set(k, ln);
     });
-    const maxPair = Math.max(1, ...[...pairs.values()].map((p) => p.ab + p.ba));
-    [...pairs.values()].sort((x, y) => x.ab + x.ba - (y.ab + y.ba)).forEach((p) => {
-      const A = stops[p.a], B = stops[p.b];
-      if (!A || !B) return;
-      const n = p.ab + p.ba;
-      const line = L.polyline([[A.lat, A.lon], [B.lat, B.lon]], {
-        color: s1, weight: 1.5 + 8 * Math.sqrt(n / maxPair), opacity: 0.35 + 0.45 * (n / maxPair), lineCap: "round",
+    const maxN = Math.max(1, ...[...lines.values()].map((p) => p.n));
+    [...lines.values()].sort((x, y) => x.n - y.n).forEach((p) => {
+      const line = L.polyline(p.pts, {
+        color: s1, weight: 1.5 + 7 * Math.sqrt(p.n / maxN), opacity: 0.35 + 0.45 * (p.n / maxN),
+        lineCap: "round", lineJoin: "round", dashArray: p.routed || straight ? null : "4 6",
       });
       const avg = p.mins.length ? Math.round(p.mins.reduce((s, v) => s + v, 0) / p.mins.length) : null;
-      line.bindTooltip(`<strong>${n} trips</strong><br>${esc(p.a)} → ${esc(p.b)}: ${p.ab}<br>${esc(p.b)} → ${esc(p.a)}: ${p.ba}${avg != null ? `<br>avg ${avg} min` : ""}`, { sticky: true });
+      const routesTxt = [...p.routes].sort((a, b) => b[1] - a[1]).map(([r, n]) => `${esc(r)} (${n})`).join(", ");
+      const tripsTxt = [...p.trips].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t, n]) => `${esc(t)}: ${n}`).join("<br>");
+      line.bindTooltip(`<strong>${p.n} trip${p.n > 1 ? "s" : ""}</strong>${routesTxt ? ` · likely route ${routesTxt}` : ""}<br>${tripsTxt}` +
+        `${avg != null ? `<br>avg ${avg} min` : ""}${!p.routed && !straight ? `<br><span style="opacity:.7">no timetabled service found; straight line</span>` : ""}`, { sticky: true });
       mapLayer.addLayer(line);
     });
     // selected journey on top
     if (state.selJourney != null) {
       legs.filter((l) => l.journey === state.selJourney).forEach((l) => {
-        const A = l.from && stops[l.from], B = l.to && stops[l.to];
-        if (A && B) mapLayer.addLayer(L.polyline([[A.lat, A.lon], [B.lat, B.lon]], { color: s2, weight: 6, opacity: 0.95 }));
+        if (l.from && l.to && stops[l.from] && stops[l.to])
+          mapLayer.addLayer(L.polyline(legPoints(l, straight), { color: s2, weight: 6, opacity: 0.95, lineJoin: "round" }));
       });
     }
     const maxUse = Math.max(1, ...Object.values(use).map((u) => u.on + u.off));
@@ -238,6 +246,11 @@
       m.on("click", () => { state.stop = state.stop === name ? "" : name; $("#stop").value = state.stop; render(); });
       mapLayer.addLayer(m);
     });
+  }
+  function legPoints(l, straight) {
+    if (!straight && l.path && D.paths[l.path]) return D.paths[l.path];
+    const A = stops[l.from], B = stops[l.to];
+    return [[A.lat, A.lon], [B.lat, B.lon]];
   }
   function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
 
@@ -466,7 +479,8 @@
   // ---------- table ----------
   function renderTable(rows) {
     const k = state.sort.k, dir = state.sort.asc ? 1 : -1;
-    const val = (l) => (k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD) : l[k] ?? "");
+    const val = (l) => (k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD)
+      : k === "route" ? (l.route || "").padStart(6, "0") : l[k] ?? "");
     const sorted = [...rows].sort((a, b) => (val(a) > val(b) ? dir : val(a) < val(b) ? -dir : (a.i - b.i) * dir));
     document.querySelectorAll("#trips th").forEach((th) => {
       th.classList.toggle("sorted", th.dataset.k === k);
@@ -481,6 +495,7 @@
       if (l.transfer) fromCell.append(el("span", { class: "tag", text: "transfer" }));
       if (stops[l.from]?.auto || stops[l.to]?.auto) toCell.append(el("span", { class: "tag", text: "stop unverified" }));
       tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }), el("td", { text: hm(l.offD) }),
+        el("td", { text: l.route || "", title: l.route ? `likely ${l.mode || "bus"} route, from the current timetable` : "" }),
         fromCell, toCell, el("td", { class: "num", text: l.mins ?? "" }), el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: money(l.balance) }));
       tr.onclick = () => { state.selJourney = state.selJourney === l.journey ? null : l.journey; renderMap(filtered()); renderTable(filtered()); };
       return tr;

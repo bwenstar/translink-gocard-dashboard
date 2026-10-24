@@ -24,12 +24,13 @@ data/
   raw/<YYMMDD>-<YYMMDD>/*.csv  # untouched copy of each download, a backup (gitignored)
   stops.json              # YOUR go card stop name -> GTFS stop_id map (gitignored, auto-created)
   stops.example.json      # format example for stops.json (committed)
-  gtfs/stops.txt          # Translink GTFS stop list, cached (gitignored)
+  gtfs/                   # Translink GTFS zip, stops.txt, paths_cache.json (gitignored)
 scripts/
   fetch_gtfs.py           # downloads Translink's public GTFS feed (stop coordinates)
   fetch_history.py        # logs in to go card online, downloads and merges into history.csv
   history.py              # the master file: read, merge (de-dupe), save
   build.py                # history.csv -> dashboard/data.js
+  routes.py               # likely route + path per leg from the GTFS timetable
 dashboard/
   index.html, app.js, style.css   # static dashboard, open index.html directly
   data.js                 # generated, personal (gitignored)
@@ -107,8 +108,12 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [ ] Optional: serve the dashboard locally or publish a privacy-scrubbed version
 
 ### Phase 4 — richer analysis (optional)
-- [ ] Draw the actual route path (GTFS `shapes.txt`) instead of straight lines
-- [ ] Infer the route number from stop pairs and time (GTFS `stop_times.txt`)
+- [x] Draw the actual route path (GTFS `shapes.txt`) instead of straight lines. Dashed straight
+      lines where no service matches; a "Straight lines" toggle on the map.
+- [x] Infer the route number from stop pairs and time (GTFS `stop_times.txt`): trips calling at
+      stops within 200 m of the tap-on, then the tap-off; nearest departure on the same weekday.
+      Uses the current timetable, so older trips are a best guess; pairs with no current service
+      stay straight. Cached in `data/gtfs/paths_cache.json`.
 - [ ] On-time vs. timetable comparison
 
 ## How to run (current)

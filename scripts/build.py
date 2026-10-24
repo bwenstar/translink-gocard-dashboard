@@ -4,6 +4,7 @@
 - reads the master kept by fetch_history.py (overlapping downloads are already merged)
 - groups transfer legs into journeys
 - geocodes stops via data/stops.json -> GTFS stops.txt, auto-guessing new stops
+- infers each leg's likely route and its path on the map from the GTFS timetable (routes.py)
 """
 import argparse
 import csv
@@ -16,6 +17,7 @@ import re
 import sys
 
 from history import Master
+import routes
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -152,6 +154,8 @@ def main():
                     help="go card stop name -> GTFS stop_id map, created if missing (default: data/stops.json)")
     ap.add_argument("--gtfs", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "stops.txt",
                     help="GTFS stops.txt (default: data/gtfs/stops.txt)")
+    ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip",
+                    help="full GTFS feed for route paths; skipped if missing (default: data/gtfs/SEQ_GTFS.zip)")
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
                     help="generated dashboard data file (default: dashboard/data.js)")
     args = ap.parse_args()
@@ -228,9 +232,18 @@ def main():
     if missing:
         print("No coordinates for:", ", ".join(missing))
 
+    paths = {}
+    if args.gtfs_zip.exists():
+        name_to_stop = {n: s["stop_id"] for n, s in stops.items()}
+        paths, st = routes.infer(legs, name_to_stop, gtfs, args.gtfs_zip, args.gtfs_zip.parent / "paths_cache.json")
+        print(f"Route paths: {st['legs']} of {len(legs)} legs, {len(st['unmatched'])} of {st['pairs']} stop pairs "
+              f"had no timetabled trip (drawn as straight lines)")
+    else:
+        print(f"No {args.gtfs_zip} - run scripts/fetch_gtfs.py to draw route paths instead of straight lines")
+
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
-        "history": args.history.name, "rows": len(raw), "stops": stops, "legs": legs, "topups": topups,
+        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("window.TRAVEL = " + json.dumps(payload, ensure_ascii=False) + ";\n")

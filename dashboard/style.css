@@ -141,3 +141,6 @@ tr.transfer td:first-child { padding-left: 20px; color: var(--muted); }
 .tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--border); color: var(--ink-2); }
 .tag.bad { border-color: var(--critical); color: var(--critical); }
 .tag.bad::before { content: "⚠ "; }
+
+.card header.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; color: var(--ink-2); cursor: pointer; }

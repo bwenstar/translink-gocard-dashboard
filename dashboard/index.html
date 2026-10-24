@@ -36,7 +36,8 @@
 
   <section class="grid">
     <article class="card span-2">
-      <header><h2>Where you travel</h2><p class="muted">Stops sized by tap-ons + tap-offs, lines by trips between them. Click a stop to filter.</p></header>
+      <header class="row"><div><h2>Where you travel</h2><p class="muted">Stops sized by tap-ons + tap-offs, lines by trips along them. Paths follow the likely route from the current timetable; dashed lines had no match. Click a stop to filter.</p></div>
+        <label class="toggle"><input type="checkbox" id="straight"> Straight lines</label></header>
       <div id="map"></div>
     </article>
 
@@ -74,7 +75,7 @@
       <header class="row"><div><h2>All trips</h2><p class="muted" id="tableNote"></p></div></header>
       <div class="table-wrap"><table id="trips">
         <thead><tr>
-          <th data-k="on">Date</th><th data-k="onT">On</th><th data-k="offT">Off</th>
+          <th data-k="on">Date</th><th data-k="onT">On</th><th data-k="offT">Off</th><th data-k="route">Route</th>
           <th data-k="from">From</th><th data-k="to">To</th>
           <th data-k="mins" class="num">Mins</th><th data-k="fare" class="num">Fare</th><th data-k="balance" class="num">Balance</th>
         </tr></thead>

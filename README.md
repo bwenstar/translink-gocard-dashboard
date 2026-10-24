@@ -22,13 +22,17 @@ are gitignored.
 - **Import manual exports**: merge CSVs you downloaded from the website yourself.
 - **Stop geocoding**: go card stop names are matched to Translink's public GTFS stop list. Matching
   is fuzzy but platform-aware, and anything uncertain is flagged for you to check.
+- **Route paths and route numbers**: each trip is matched against Translink's timetable to find
+  the service you most likely caught. The map draws its real path along the roads, busway, rail
+  line or river, and the trip table shows the route number.
 - **Static dashboard**: open `dashboard/index.html` straight from disk. There's no server and no
   build tooling, and it supports light and dark mode.
   - KPIs: journeys, legs, fares, time on board, travel days, failed touch-offs, top-ups
-  - map of stops and stop-to-stop trips (click a stop to filter)
+  - map of stops and trips along their actual route paths, with a straight-line toggle
+    (click a stop to filter)
   - trips-per-day calendar, weekday × hour heatmap, weekly/monthly trip counts
   - top routes, trip-duration histogram, card balance over time with top-ups
-  - sortable trip table (click a row to show that journey on the map)
+  - sortable trip table with the likely route number (click a row to show that journey on the map)
   - filters for date range, presets, weekdays and stop
 
 ## Requirements
@@ -93,13 +97,14 @@ Reads `data/history.csv` and writes `dashboard/data.js`. Run it after every down
 | `--history` | `data/history.csv` |
 | `--stops` | `data/stops.json` (created automatically) |
 | `--gtfs` | `data/gtfs/stops.txt` |
+| `--gtfs-zip` | `data/gtfs/SEQ_GTFS.zip`. Full feed used for route paths; without it, lines are straight |
 | `--out` | `dashboard/data.js` |
 
 ### Stop coordinates: `scripts/fetch_gtfs.py`
 
 Downloads Translink's public [SEQ GTFS feed](https://gtfsrt.api.translink.com.au/GTFS/SEQ_GTFS.zip)
-and keeps `stops.txt` and `routes.txt` in `data/gtfs/`. Run it once, and again if new stops show
-up without coordinates.
+(about 35 MB) into `data/gtfs/`. It keeps the whole zip for route paths and extracts `stops.txt`
+and `routes.txt`. Run it once, and again every so often to pick up timetable changes or new stops.
 
 ### Checking stop matches
 
@@ -136,13 +141,14 @@ scripts/
   fetch_history.py          log in, download in 6-month windows, merge into history.csv
   history.py                master file: parse, merge/de-dupe, save
   build.py                  history.csv -> dashboard/data.js, stop matching
+  routes.py                 likely route per trip and its path, from the GTFS timetable
   fetch_gtfs.py             Translink GTFS stop list
 data/
   history.csv               master travel history (gitignored)
   raw/                      backup copy of every download (gitignored)
   stops.json                your stop name -> GTFS stop_id map (gitignored)
   stops.example.json        format example
-  gtfs/                     cached GTFS files (gitignored)
+  gtfs/                     GTFS feed and route-path cache (gitignored)
 dashboard/
   index.html, app.js, style.css
   data.js                   generated from your history (gitignored)
@@ -173,6 +179,13 @@ A completed trip is never replaced by an open one.
 
 Transfer legs are grouped into journeys.
 
+**Route paths.** For each tap-on/tap-off stop pair, `routes.py` searches the GTFS `stop_times.txt`
+for trips that call at the tap-on stop and later at the tap-off stop. Stops within 200 m also count,
+which covers station platforms. Each trip takes the service whose departure is nearest the tap-on
+time on the same weekday. That trip's shape (`shapes.txt`) is cut between the two stops and
+simplified. The first build takes about 10 seconds. Results are cached in
+`data/gtfs/paths_cache.json`, so later builds take under a second until the feed or your stops change.
+
 **Dashboard.** Plain HTML, CSS and JS with hand-drawn SVG charts and [Leaflet](https://leafletjs.com)
 for the map. Map tiles are Esri World Gray Canvas, which needs no API key and works from `file://`.
 
@@ -198,15 +211,16 @@ The second command should print nothing.
   a new history.
 - Trips you started by topping up with the driver have no recorded boarding stop. They show as
   "Unknown stop".
-- Map lines are straight stop-to-stop, not the actual route.
+- Routes come from Translink's **current** timetable, so for older trips they are a best guess.
+  If no current service links two stops (for example the route was changed or removed), the trip
+  is drawn as a dashed straight line.
 - This uses go card online's website, not a public API. It may break if Translink changes the site.
 
 ## Roadmap
 
 See [PLAN.md](PLAN.md). Next up:
 - `make update` and a scheduled (cron/systemd) weekly fetch with failure notifications
-- actual route paths from GTFS shapes
-- route inference and on-time comparison
+- on-time comparison against the timetable
 
 ## Disclaimer
 
