@@ -63,7 +63,7 @@ are gitignored.
 git clone <this repo> && cd <repo>
 pip install -r requirements.txt
 
-cp .env.example .env               # then fill in your card number and password
+cp .env.example .env && chmod 600 .env   # then fill in your card number (and password)
 python3 scripts/fetch_gtfs.py      # once: Translink stop coordinates
 python3 scripts/fetch_history.py --all
 python3 scripts/build.py
@@ -80,6 +80,9 @@ PASSWORD=your-go-card-online-password
 
 `GOCARD_CARD` / `GOCARD_PASSWORD` also work, in `.env` or as environment variables. `USERNAME` is
 only read from `.env`, never from the environment, where it's usually your OS login name.
+
+**Rather not store your password?** Leave `PASSWORD` out of `.env`, or run with `--ask`.
+`fetch_history.py` will prompt for it each run, and it's held in memory only for that run.
 
 ## Usage
 
@@ -101,6 +104,7 @@ Options:
 | `--raw` | `data/raw` | where a backup copy of each download is saved, as `<YYMMDD>-<YYMMDD>/Travel_history.csv` |
 | `--no-raw` | | don't keep backup copies |
 | `--env` | `.env` | credentials file |
+| `--ask` | | prompt for the password instead of reading it from `.env` |
 
 Each window is merged and saved as soon as it's downloaded, so an interrupted run keeps what it got.
 
@@ -213,7 +217,47 @@ for the map. Modes use three colour-blind-checked colours (bus blue, rail orange
 Light rail shares the rail colour with a dashed line, because a fourth colour can't be told apart
 reliably. Map tiles are Esri World Gray Canvas, which needs no API key and works from `file://`.
 
-## Privacy
+## Security & privacy
+
+This is a local tool. There is no server, account or analytics, and nothing is uploaded anywhere.
+Don't just take that on trust: the code is short enough to check.
+
+### Your go card credentials
+
+- They are read in one place, `credentials()` in `scripts/fetch_history.py`, and sent in one
+  place, `login()`: a single HTTPS `POST` to `https://gocard.translink.com.au/webtix/welcome/welcome.do`,
+  the same form the website uses.
+- After logging in, the script checks it's still on `gocard.translink.com.au` and stops otherwise.
+- They are never printed or logged (only the card's last 4 digits are shown), never written to
+  any other file, and never sent to any other site.
+- One login attempt per run. A failed login stops immediately rather than retrying, so a wrong
+  password can't lock your card. The script logs out when it finishes.
+- `.env` is gitignored. The script warns if it's readable by other users (`chmod 600 .env`).
+  It also refuses to run with the placeholder card number from `.env.example`.
+- To avoid storing the password at all, use `--ask` (see above).
+- Use a go card password you don't use anywhere else. If you think it's been exposed, change it
+  on the go card website, which makes the old one useless.
+
+To audit it yourself, list every network call in the project:
+
+```bash
+grep -rnE "https?://|requests\.|urlopen" scripts dashboard
+```
+
+### Every network request the project makes
+
+| From | To | What's sent | Why |
+|---|---|---|---|
+| `fetch_history.py` | `gocard.translink.com.au` | card number + password (login), date ranges | download your history |
+| `fetch_gtfs.py` | `gtfsrt.api.translink.com.au` | nothing personal (plain download) | public timetable and stop data |
+| dashboard (browser) | `unpkg.com` | nothing personal | the Leaflet map library, pinned with integrity hashes |
+| dashboard (browser) | `server.arcgisonline.com` (Esri) | which map tiles to draw | background map |
+
+Your trip data (`data.js`) is read by the browser from disk and never leaves your computer.
+The one thing worth knowing: map tile requests reveal to Esri which area you're looking at, like
+any web map. `build.py`, `history.py` and `routes.py` make no network requests.
+
+### Personal files
 
 These files are personal and are gitignored. Don't commit them:
 
@@ -223,13 +267,18 @@ These files are personal and are gitignored. Don't commit them:
 | `data/history.csv`, `data/raw/` | every trip you've taken |
 | `data/stops.json` | the stops you use, which reveal roughly where you live and work |
 | `dashboard/data.js` | all of the above, compiled |
+| `data/gtfs/paths_cache.json` | the stop pairs you travel between |
 
 Before pushing a fork, check `git status` and
 `git log --all --name-only --format= | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
-The second command should print nothing.
+The second command should print nothing. Also check your own notes and commit messages for stop
+names or card digits before publishing a fork.
 
 ## Limitations
 
+- Works for anyone with a go card online account in South East Queensland: nothing in the code is
+  specific to one person. Stops are matched from scratch for each user (check the guesses the
+  build prints).
 - One card per login. The site shows one card per session, so multiple cards aren't supported yet.
 - History only goes back as far as go card online keeps it for that card. A replacement card starts
   a new history.

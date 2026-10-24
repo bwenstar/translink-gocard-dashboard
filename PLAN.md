@@ -111,6 +111,13 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [ ] Multiple cards, if the account has more than one (one card per login on this site, so
       probably several `.env` profiles)
 
+### Credentials & publishing hygiene
+- [x] Credentials only go to gocard.translink.com.au over HTTPS (host checked after login), never
+      printed or logged; `--ask` / no PASSWORD = prompt with getpass; warn if `.env` isn't chmod 600;
+      refuse the `.env.example` placeholder card
+- [x] Leaflet loaded with SRI hashes; README "Security & privacy" lists every network request
+- [ ] Never put personal examples (your stops, card digits, dates) in committed docs. Grep before pushing.
+
 ### Phase 3 — run it on a schedule
 - [ ] One command: `make update` = fetch history, then build
 - [ ] cron or systemd timer (weekly), plus a notification on login failure or site changes

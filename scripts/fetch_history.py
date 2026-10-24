@@ -15,14 +15,20 @@ Modes:
 
 Credentials: GOCARD_CARD / GOCARD_PASSWORD from the environment, else USERNAME /
 PASSWORD (or GOCARD_CARD / GOCARD_PASSWORD) from .env. USERNAME is deliberately not
-read from the environment, where it is usually your OS login name.
+read from the environment, where it is usually your OS login name. Leave PASSWORD out
+(or pass --ask) to be prompted for it instead of storing it.
+
+Your card number and password are only ever sent to LOGIN_URL below, over HTTPS. They
+are never printed, logged, saved anywhere else, or sent to any other site.
 """
 import argparse
 import datetime as dt
+import getpass
 import os
 import pathlib
 import sys
 import time
+from urllib.parse import urlparse
 
 import requests
 
@@ -35,6 +41,8 @@ EXPORT_URL = f"{BASE}/cardinfo/history.do"
 WINDOW_DAYS = 180
 OVERLAP_DAYS = 7
 DELAY_S = 2.0
+HOST = "gocard.translink.com.au"
+EXAMPLE_CARD = "0123456789012345"  # the placeholder in .env.example
 UA = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
 
 
@@ -49,15 +57,28 @@ def read_env(path):
     return vals
 
 
-def credentials(env_path):
+def warn_if_readable(path):
+    """.env holds a password: warn if other users on this machine can read it."""
+    if os.name == "posix" and path.exists() and path.stat().st_mode & 0o077:
+        print(f"Warning: {path} is readable by other users. Fix with: chmod 600 {path}", file=sys.stderr)
+
+
+def credentials(env_path, ask=False):
+    warn_if_readable(env_path)
     env = read_env(env_path)
     card = os.environ.get("GOCARD_CARD") or env.get("GOCARD_CARD") or env.get("USERNAME")
-    pw = os.environ.get("GOCARD_PASSWORD") or env.get("GOCARD_PASSWORD") or env.get("PASSWORD")
-    if not card or not pw:
-        sys.exit(f"No credentials: set USERNAME and PASSWORD in {env_path} (or GOCARD_CARD / GOCARD_PASSWORD)")
+    pw = None if ask else os.environ.get("GOCARD_PASSWORD") or env.get("GOCARD_PASSWORD") or env.get("PASSWORD")
+    if not card:
+        sys.exit(f"No go card number: set USERNAME in {env_path} (copy .env.example) or GOCARD_CARD")
     card = card.replace(" ", "")
+    if card == EXAMPLE_CARD:
+        sys.exit(f"{env_path} still has the example card number - fill in your own")
     if not (card.isdigit() and len(card) == 16):
         sys.exit("The go card number (USERNAME) should be 16 digits")
+    if not pw:
+        if not sys.stdin.isatty():
+            sys.exit("No password: set PASSWORD in .env or GOCARD_PASSWORD, or run interactively to be asked")
+        pw = getpass.getpass(f"go card online password for card ...{card[-4:]}: ")
     return card, pw
 
 
@@ -68,6 +89,8 @@ def login(card, pw):
     r = s.post(LOGIN_URL, data={"cardOps": "Display", "cardNum": card, "pass": pw},
                headers={"Referer": LOGIN_URL}, timeout=30)
     r.raise_for_status()
+    if urlparse(r.url).hostname != HOST:
+        sys.exit(f"Login redirected to {urlparse(r.url).hostname} - stopping (expected {HOST})")
     if 'id="login-form"' in r.text or "/online/summary" not in r.url:
         sys.exit("Login failed - check the card number and password in .env "
                  "(stopping now to avoid locking the account)")
@@ -144,6 +167,7 @@ def main():
                     help="where to keep a copy of each download (default: data/raw)")
     ap.add_argument("--no-raw", action="store_true", help="don't keep per-window copies")
     ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env", help="credentials file")
+    ap.add_argument("--ask", action="store_true", help="prompt for the password instead of reading it")
     args = ap.parse_args()
 
     master = Master(args.history)
@@ -170,7 +194,7 @@ def main():
     if start and start > end:
         sys.exit("--from is after --to")
 
-    card, pw = credentials(args.env)
+    card, pw = credentials(args.env, args.ask)
     s = login(card, pw)
     print(f"Logged in as card ...{card[-4:]}")
     total = added = updated = empty_run = 0
