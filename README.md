@@ -56,7 +56,8 @@ with fictional example data. Nothing to install.
 - **Static dashboard**: open `dashboard/index.html` straight from disk. There's no server and no
   build tooling, and it supports light and dark mode.
   - KPIs: journeys, fares, distance travelled, time on board, days travelled, longest daily
-    streak, busiest day, routes used, failed touch-offs, top-ups
+    streak, busiest day, routes used, failed touch-offs, top-ups, and **"If you'd driven"**: the
+    cost and CO₂ of driving the same distance instead
   - **map**:
     - trips drawn along their real route path, coloured by mode and sized by use
     - an optional layer showing the whole rail and ferry network
@@ -438,6 +439,18 @@ When a bus actually *departed* isn't measured. Rides are matched to the nearest 
 departure, so with services every few minutes a late bus is indistinguishable from the next one
 running on time. The demo compares all its rides, because its fictional trips were generated
 from the current timetable.
+
+**"If you'd driven."** The same distance in an average Australian car, as an estimate:
+- **cost:** the [ATO cents-per-km rate](https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/cars-transport-and-travel/motor-vehicle-and-car-expenses/claiming-car-expenses/cents-per-kilometre-method)
+  for 2025–26, 88 c/km. It covers fuel, registration, insurance, servicing, tyres and
+  depreciation, but **not parking**, which in the CBD can cost more than all of that.
+- **CO₂:** the [National Transport Commission](https://www.ntc.gov.au/)'s average for Australia's
+  whole light-vehicle fleet, 190.8 g/km (2025 report).
+
+Distances are along your route, which a car's may differ from. Your share of the bus, train or
+ferry's own emissions isn't subtracted. Published figures for that depend heavily on how full
+the vehicle is, so there's no fair number to use; the tile says CO₂ "by car", not "saved". To use
+your own car's figures, change `CAR` at the top of `dashboard/app.js`.
 
 **Dashboard.** Plain HTML, CSS and JS with hand-drawn SVG charts and [Leaflet](https://leafletjs.com)
 for the map. Modes use three colour-blind-checked colours (bus blue, rail orange, ferry aqua).

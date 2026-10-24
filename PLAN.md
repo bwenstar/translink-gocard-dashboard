@@ -91,7 +91,10 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
   - new KPIs: distance, longest streak, busiest day, routes used
   - new charts: by mode, top route numbers, most used stops, spending per month
   - CSV export of the filtered trips
-- [ ] Ideas: compare cost against a pre-50c-fare world or by driving, CO₂ vs. driving, replay animation
+- [x] "If you'd driven" KPI: the same distance at the ATO's 88 c/km (2025–26; excludes parking) and
+      the NTC fleet average of 190.8 g CO₂/km. PT's own emissions aren't subtracted: there's no fair
+      per-passenger figure for Brisbane buses, trains or ferries.
+- [ ] Ideas: cost against pre-50c zone fares (needs historical zone data), replay animation
 
 ### Phase 2 — automated retrieval  ✅
 - [x] Inspect the site: login form, export URL, 6-month limit (see "How the site works")

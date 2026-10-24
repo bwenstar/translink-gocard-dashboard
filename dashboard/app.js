@@ -53,6 +53,13 @@
   const niceMax = (v) => { if (v <= 5) return Math.max(1, Math.ceil(v)); const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / (p / 2)) * (p / 2); };
   const stopName = (n) => n || "Unknown stop"; // e.g. topped up with the driver, so no touch-on stop
   const onTime = (l) => (l.timeUnknown ? "?" : hm(l.onD));
+  // "If you'd driven": estimates for the same distance in an average Australian car. Change them
+  // here if you have better numbers for your own car.
+  const CAR = {
+    costPerKm: 0.88,   // ATO cents-per-km rate, 2025–26: fuel, registration, insurance, servicing, tyres, depreciation (not parking)
+    co2KgPerKm: 0.191, // NTC: average CO2 intensity of Australia's whole light-vehicle fleet, 190.8 g/km (2025 report)
+    sources: "ATO cents-per-km rate 2025–26 (88c/km) · NTC fleet average 190.8 g CO₂/km",
+  };
   const TOPUP_LABEL = { auto: "auto top-up", manual: "top-up", adjustment: "adjustment" };
   const pairKey = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
   const short = (n, max = 28) => (n.length > max ? n.slice(0, max - 1) + "…" : n);
@@ -336,6 +343,18 @@
     const tiles = [
       { label: "Journeys", value: journeys.size.toLocaleString(), sub: `${plural(rows.length, "leg")}, ${plural(transfers, "transfer")}`, hero: true },
       { label: "Spent on fares", value: money(spent), sub: journeys.size ? `${money(spent / journeys.size)} per journey` : "" },
+      (() => {
+        const carCost = kmTotal * CAR.costPerKm, co2 = kmTotal * CAR.co2KgPerKm;
+        const co2Txt = co2 >= 1000 ? `${(co2 / 1000).toFixed(1)} t` : `${Math.round(co2).toLocaleString()} kg`;
+        return {
+          label: "If you'd driven", value: `$${Math.round(carCost).toLocaleString()}`,
+          sub: `≈ ${co2Txt} CO₂ by car · you paid ${money(spent)} in fares`,
+          title: `Driving the same ${fmtKm(kmTotal)} km in an average Australian car: about ${money(carCost)} at the ATO's 88c/km, `
+            + `which covers running and owning the car but not parking, and about ${co2Txt} of CO₂ at the fleet average of 191 g/km. `
+            + `Your share of the bus, train or ferry's own emissions isn't subtracted: it depends on how full it was. `
+            + `Distances are along your route, which a car's may differ from. Sources: ${CAR.sources}.`,
+        };
+      })(),
       { label: "Distance", value: `${fmtKm(kmTotal)} km`, sub: journeys.size ? `${fmtKm(kmTotal / journeys.size)} km per journey${approx ? ` · ${approx} straight-line` : ""}` : "" },
       { label: "Time on board", value: `${(mins / 60).toFixed(1)} h`, sub: timed.length ? `${Math.round(mins / timed.length)} min per leg` : "" },
       vsTile(rows),
@@ -344,9 +363,9 @@
       { label: "Busiest day", value: busiest ? plural(busiest[1], "leg") : "–", sub: busiest ? fmtDate(parse(busiest[0])) : "" },
       { label: "Routes used", value: Object.keys(routeCounts).length, sub: topRoute ? `most: ${routeInfo.get(topRoute[0]).label} (${topRoute[1]})` : "" },
       { label: "Failed touch-offs", value: failed.length, sub: failed.length ? `${money(failed.reduce((s, l) => s + l.fare, 0))} in penalty fares` : "none" },
-      { label: "Top-ups", value: money(tops.reduce((s, t) => s + (t.amount || 0), 0)), sub: `${plural(tops.length, "top-up")} (date filter only)` },
+      { label: "Top-ups", value: money(tops.reduce((s, t) => s + (t.amount || 0), 0)), sub: `${plural(tops.length, "top-up")} (${MULTI ? "date and card filters" : "date filter"} only)` },
     ];
-    $("#kpis").replaceChildren(...tiles.map((t) => el("div", { class: "kpi" + (t.hero ? " hero" : "") },
+    $("#kpis").replaceChildren(...tiles.map((t) => el("div", { class: "kpi" + (t.hero ? " hero" : ""), ...(t.title ? { title: t.title } : {}) },
       el("div", { class: "label", text: t.label }), el("div", { class: "value", text: String(t.value) }), el("div", { class: "sub", text: t.sub }))));
   }
 
