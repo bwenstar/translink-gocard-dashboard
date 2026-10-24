@@ -122,7 +122,12 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
 - [x] Every run checks the login form before sending credentials and the CSV header of every download
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
-- [x] `tests/`: parser (all row types), master merge, site-contract checks, stop matching
+- [x] `tests/` (87 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
+      fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
+      full build), history, make_example; GitHub Actions on push. Each safety rule was verified by
+      breaking it on purpose (the test must fail).
+- [x] Bug found by the tests: a service that doesn't run on the trip's weekday could still be
+      picked using its times from other days. Fixed in routes.py.
 - [ ] Re-run `--check-site` for the 6-month limit: the 2026-10-24 check reported a non-empty 400-day
       reply (the old behaviour was an empty body), and the follow-up probe timed out. The check now
       tests for rows older than 180 days.

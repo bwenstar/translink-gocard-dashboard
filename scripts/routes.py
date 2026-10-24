@@ -186,9 +186,14 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
             bit, minute = 1 << on.weekday(), on.hour * 60 + on.minute
             best, best_s = None, math.inf
             want = {expect.get(l["from"]), expect.get(l["to"])} - {None, "bus"}
+            # Only services that run on that weekday compete; if none do (an old trip vs. today's
+            # timetable), fall back to every day's departures.
+            runs_today = any(mask & bit for *_, deps in opts for _, mask in deps)
             for route_id, shape_id, sa, sb, pen, deps in opts:
-                same_day = [m for m, mask in deps if mask & bit] or [m for m, _ in deps]
-                gap = min(min(abs(m - minute), abs(m - 1440 - minute)) for m in same_day)
+                times = [m for m, mask in deps if mask & bit or not runs_today]
+                if not times:
+                    continue
+                gap = min(min(abs(m - minute), abs(m - 1440 - minute)) for m in times)
                 s = gap if not l["timeUnknown"] else 0
                 s += pen / 50  # 50 m from the mapped stop ~ 1 minute of timetable gap
                 if want and MODES.get(routes.get(route_id, ("", 3, ""))[1]) not in want:

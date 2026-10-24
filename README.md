@@ -1,5 +1,7 @@
 # translink-gocard-dashboard
 
+[![tests](https://github.com/bwenstar/translink-gocard-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/bwenstar/translink-gocard-dashboard/actions/workflows/tests.yml)
+
 Download your [Translink](https://translink.com.au) go card travel history and explore it
 on a local dashboard: trips on a map, a calendar, when you travel, top routes, time on board,
 card balance and a searchable trip table.
@@ -207,8 +209,8 @@ scripts/
 docs/
   screenshots/              README images (from the example data)
   site-contract.json        how go card online works (login form, export, CSV format), checked every run
-tests/
-  test_parsing.py           parser, merge and site-check tests (python3 -m unittest discover tests)
+tests/                      unit tests (python3 -m unittest discover tests); no network needed
+  fakes.py                  a tiny made-up GTFS feed and a fake go card online site
   fetch_gtfs.py             Translink GTFS stop list
   make_example.py           regenerates examples/ from the timetable (fictional commuter, seeded)
 examples/
@@ -326,6 +328,30 @@ Before pushing a fork, check `git status` and
 The second command should print nothing. Also check your own notes and commit messages for stop
 names or card digits before publishing a fork.
 
+## Tests
+
+```bash
+python3 -m unittest discover tests
+```
+
+About 90 tests, runnable in under a second. They need no network, go card account or Translink
+download: the go card website and the timetable are replaced by fakes in `tests/fakes.py`, a tiny
+made-up town with a bus, train, rail replacement bus, ferry and light rail. GitHub Actions runs
+them on every push (Python 3.9 and 3.12).
+
+| File | Covers |
+|---|---|
+| `test_fetch_history.py` | `.env` reading, which credentials win, the password prompt, the `.env` permission warning, 180-day windows. Login never posts to an unrecognised form, never retries and stops on a redirect. Export stops on HTML or changed columns. Full `--all`, incremental, `--years`, `--from/--to`, `--import` and `--check-site` runs against the fake site. |
+| `test_routes.py` | Picks the nearest departure on the same weekday, trains beat buses between stations, ignores rail replacement buses, cuts paths at the stops, uses the cache, builds the network layer |
+| `test_build.py` | Times, stop-name tokens, stop matching from scratch (picks the right one of two same-named streets), stop modes, and a full build on the fake feed |
+| `test_parsing.py`, `test_history.py` | Every CSV row type, money formats, merging and de-duplicating downloads, master file ordering |
+| `test_make_example.py` | The example generator: real-looking CSV, consistent balances, same output for the same seed |
+
+The safety rules are checked against deliberate breakage. Disabling any one of them (the login-form
+check, the host check, the CSV column check, the 180-day limit, the rail-replacement filter, the
+station penalty, the weekday filter, the "never revert a completed trip" rule, and others) makes
+at least one test fail.
+
 ## If the site changes
 
 This project depends on go card online's website, which Translink can change at any time. To make
@@ -344,8 +370,8 @@ that easy to spot and fix:
   saves the raw pages to `data/site-snapshots/<date>/`. They're private and gitignored because they
   include your card details. Run it after a failure, or now and then, so whoever fixes the project
   later can compare old and new pages.
-- **Tests** (`python3 -m unittest discover tests`) cover every row type and the site checks, using
-  made-up sample data, so the parser can be changed safely.
+- **Tests** (see [Tests](#tests)) cover every row type and the site checks, using made-up sample
+  data, so the parser can be changed safely.
 
 To fix a break: run `--check-site`, compare the new pages with an old snapshot, update
 `fetch_history.py` (and `build.py` if the CSV changed) and `docs/site-contract.json` together.
