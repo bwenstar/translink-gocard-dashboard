@@ -15,8 +15,8 @@ check-site:       ## check go card online still works as docs/site-contract.json
 	$(PY) scripts/fetch_history.py --check-site
 gtfs:             ## re-download Translink's timetable
 	$(PY) scripts/fetch_gtfs.py
-serve:            ## view the dashboard at http://localhost:8000
-	$(PY) -m http.server --directory dashboard 8000
+serve:            ## view the dashboard at http://localhost:8000 (see scripts/serve.py for the network)
+	$(PY) scripts/serve.py
 schedule:         ## run `make update` weekly (systemd user timer, or prints a cron line)
 	$(PY) scripts/schedule.py install
 schedule-status:
