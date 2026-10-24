@@ -30,6 +30,9 @@ with fictional example data. Nothing to install.
 **Stops, durations and spending**
 ![Top stop pairs, most used stops, time on board histogram, spending per month](docs/screenshots/more-charts.png)
 
+**Ride time vs timetable:** how much slower or faster rides were than timetabled, by hour and by route.
+![Ride time vs timetable: median minutes over or under the timetable by hour of day and by route](docs/screenshots/timetable.png)
+
 **Card balance and every trip:** sortable, with likely route and distance, and exportable to CSV.
 ![Card balance over time with top-ups, and the trip table](docs/screenshots/trips.png)
 
@@ -372,6 +375,7 @@ tests/                      unit tests (python3 -m unittest discover tests); no 
   fakes.py                  a tiny made-up GTFS feed and a fake go card online site
   fetch_gtfs.py             Translink GTFS stop list
   make_example.py           regenerates examples/ from the timetable (fictional commuter, seeded)
+  make_screenshots.py       regenerates docs/screenshots/ from the example data (headless Chrome)
 examples/
   history.csv, stops.json   fictional example data for --demo and the screenshots
 data/                       everything here is gitignored except stops.example.json

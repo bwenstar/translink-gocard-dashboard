@@ -148,9 +148,9 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 ### Example data & screenshots
 - [x] `scripts/make_example.py`: a fictional commuter's year from real GTFS trips (bus, train, ferry,
       light rail, transfers, top-ups, failed touch-offs) -> `examples/`; `build.py --demo` uses it
-- [x] README screenshots in `docs/screenshots/` from the example data. To refresh them, build
-      `--demo --out` into a copy of `dashboard/`, capture at 1280 px wide with headless Chrome, and
-      crop each section.
+- [x] README screenshots in `docs/screenshots/` from the example data:
+      `python3 scripts/make_screenshots.py` (headless Chrome + Pillow) rebuilds the demo in a
+      temp copy, captures light/dark at 1280 px and crops each section by its heading.
 
 - [x] Live demo on GitHub Pages (`.github/workflows/pages.yml`): `build.py --demo` in CI, with a
       "fictional example data" banner (`demo: true` in data.js) linking back to the repo

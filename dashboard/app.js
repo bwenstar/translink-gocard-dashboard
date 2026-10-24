@@ -156,6 +156,7 @@
         $(".cards").append(b);
       });
       $("th.card-col").hidden = false;
+      $("#balanceNote").textContent = "After each trip, one line per card. Dots mark top-ups. Only the date and card filters apply.";
     }
     // routes grouped by mode, busiest first
     MODES.forEach((m) => {
