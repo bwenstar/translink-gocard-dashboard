@@ -1,0 +1,13 @@
+# secrets
+.env
+
+# personal travel data - keep out of git unless you choose otherwise
+data/raw/
+dashboard/data.js
+
+# downloaded GTFS cache (re-fetch with scripts/fetch_gtfs.py)
+data/gtfs/
+
+__pycache__/
+.venv/
+data/stops.json

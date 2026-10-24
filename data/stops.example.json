@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy to data/stops.json, or let scripts/build.py create it. Keys are go card stop labels exactly as they appear in the CSV; values point at a Translink GTFS stop_id (data/gtfs/stops.txt). \"auto\": true marks a guess made by build.py that you haven't checked yet.",
+  "Cultural Centre station - Platform 2": {"stop_id": "11168"},
+  "Queen Street Bus Station - Platform 2a": {"stop_id": "1010"},
+  "Roma St Bus Station Platform 1": {"stop_id": "10793", "auto": true, "score": 1.4}
+}
