@@ -11,3 +11,4 @@ data/gtfs/
 __pycache__/
 .venv/
 data/stops.json
+data/history.csv

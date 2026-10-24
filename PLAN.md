@@ -3,8 +3,8 @@
 Track and visualise public transport usage from Translink go card travel history
 (<https://gocard.translink.com.au/webtix/tickets-and-fares/go-card/online/history>).
 
-The site only exports **6 months at a time**, so the project keeps every export it
-has ever downloaded and merges them, de-duplicating overlaps, into one history.
+The site only exports **6 months at a time**, so every download is merged into one
+master file, `data/history.csv`, de-duplicating overlaps.
 
 This file is the source of truth for where the project is up to. Update the
 checkboxes as phases land.
@@ -17,20 +17,22 @@ checkboxes as phases land.
 .env                      # USERNAME / PASSWORD for the go card site (never committed)
 PLAN.md                   # this file
 data/
-  raw/<any-folder>/*.csv  # untouched go card exports, one folder per download (gitignored)
+  history.csv             # MASTER: every trip ever downloaded, same columns as an export (gitignored)
+  raw/<YYMMDD>-<YYMMDD>/*.csv  # untouched copy of each download, a backup (gitignored)
   stops.json              # YOUR go card stop name -> GTFS stop_id map (gitignored, auto-created)
   stops.example.json      # format example for stops.json (committed)
   gtfs/stops.txt          # Translink GTFS stop list, cached (gitignored)
 scripts/
   fetch_gtfs.py           # downloads Translink's public GTFS feed (stop coordinates)
-  fetch_history.py        # logs in to go card online, downloads CSVs into data/raw/
-  build.py                # raw CSVs -> dashboard/data.js
+  fetch_history.py        # logs in to go card online, downloads and merges into history.csv
+  history.py              # the master file: read, merge (de-dupe), save
+  build.py                # history.csv -> dashboard/data.js
 dashboard/
   index.html, app.js, style.css   # static dashboard, open index.html directly
   data.js                 # generated, personal (gitignored)
 ```
 
-Personal data (`.env`, `data/raw/`, `data/stops.json`, `dashboard/data.js`) is
+Personal data (`.env`, `data/history.csv`, `data/raw/`, `data/stops.json`, `dashboard/data.js`) is
 gitignored so the repo can be published. Before any push, check
 `git status` / `git log --stat` to confirm none of these were ever committed.
 
@@ -88,6 +90,11 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       full history matched, 7 approximate ones left flagged in `stops.json`.
 - [x] Dashboard handles multi-year ranges: a calendar row per year, monthly bars past ~6 months,
       "This year" and "Last 12 months" presets
+- [x] Master file `data/history.csv`: each download is merged in. Rows are keyed on the touch-on
+      (date, time, from) plus a repeat count. A changed row is updated, but a completed trip is
+      never replaced by an open one. `--import PATH` merges hand-made exports with no login.
+- [x] Any-length ranges: `--years N` or `--from/--to` are split into 180-day windows
+      (`--years 6` tested)
 - [ ] Multiple cards, if the account has more than one (one card per login on this site, so
       probably several `.env` profiles)
 
@@ -105,13 +112,15 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 
 ```bash
 python3 scripts/fetch_gtfs.py           # once, or when stops look stale
-python3 scripts/fetch_history.py --all  # first time: the whole history
-python3 scripts/fetch_history.py        # afterwards: just what's new
-python3 scripts/build.py                # rebuild dashboard/data.js
+python3 scripts/fetch_history.py --all  # first time: the whole history (or --years 6)
+python3 scripts/fetch_history.py        # afterwards: just what's new, merged into history.csv
+python3 scripts/fetch_history.py --from 2024-01-01 --to 2025-06-30   # any range, any length
+python3 scripts/fetch_history.py --import ~/Downloads/Travel_history.csv   # a manual export
+python3 scripts/build.py                # rebuild dashboard/data.js from history.csv
 xdg-open dashboard/index.html   # or: python3 -m http.server -d dashboard
 ```
 
-`build.py` takes `--raw`, `--stops`, `--gtfs` and `--out` to point at other locations
+`build.py` takes `--history`, `--stops`, `--gtfs` and `--out` to point at other locations
 (see `python3 scripts/build.py --help`). New stop names are auto-matched and saved
 to `stops.json` with `"auto": true`. The dashboard flags them, so check and fix the
 `stop_id` and delete the flag.

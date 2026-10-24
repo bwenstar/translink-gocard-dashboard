@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Merge every go card CSV export under data/raw/ into dashboard/data.js.
+"""Turn the master travel history (data/history.csv) into dashboard/data.js.
 
-- de-duplicates rows across overlapping exports
+- reads the master kept by fetch_history.py (overlapping downloads are already merged)
 - groups transfer legs into journeys
 - geocodes stops via data/stops.json -> GTFS stops.txt, auto-guessing new stops
 """
@@ -14,6 +14,8 @@ import math
 import pathlib
 import re
 import sys
+
+from history import Master
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -43,29 +45,6 @@ def parse_time(day, s):
     elif ampm == "AM" and h == 12:
         h = 0
     return dt.datetime.combine(day, dt.time(h, mi))
-
-
-def read_raw(raw_dir):
-    """Every *.csv under raw_dir, at any depth and with any folder naming.
-
-    Rows are keyed by their touch-on (date, time, from), so a trip that was still open in
-    one export and complete in a later one counts once; the most recently written file wins.
-    """
-    rows, sources = {}, []
-    for path in sorted(raw_dir.rglob("*.csv"), key=lambda p: (p.stat().st_mtime, str(p))):
-        sources.append(str(path.relative_to(raw_dir)))
-        seen = {}
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            next(reader, None)  # header: Date,Time,From,Time,To,Fare,Credit,Balance
-            for r in reader:
-                r = [c.strip() for c in r] + [""] * 8
-                if not r[0]:
-                    continue
-                key = (r[0], r[1], r[2])
-                seen[key] = seen.get(key, 0) + 1  # keep genuine repeats within one file
-                rows[key + (seen[key],)] = r[:8]
-    return list(rows.values()), sorted(sources)
 
 
 def load_gtfs(path):
@@ -167,8 +146,8 @@ def match_new_stops(names, stop_map, gtfs):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--raw", type=pathlib.Path, default=ROOT / "data" / "raw",
-                    help="folder searched recursively for go card CSV exports (default: data/raw)")
+    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
+                    help="master travel history from fetch_history.py (default: data/history.csv)")
     ap.add_argument("--stops", type=pathlib.Path, default=ROOT / "data" / "stops.json",
                     help="go card stop name -> GTFS stop_id map, created if missing (default: data/stops.json)")
     ap.add_argument("--gtfs", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "stops.txt",
@@ -177,9 +156,11 @@ def main():
                     help="generated dashboard data file (default: dashboard/data.js)")
     args = ap.parse_args()
 
-    raw, sources = read_raw(args.raw)
+    master = Master(args.history)
+    raw = list(master.rows.values())
     if not raw:
-        sys.exit(f"No CSV rows found under {args.raw}")
+        sys.exit(f"No rows in {args.history} - run scripts/fetch_history.py "
+                 f"(or fetch_history.py --import data/raw to use exports you already have)")
     gtfs = load_gtfs(args.gtfs)
     stop_map = json.loads(args.stops.read_text()) if args.stops.exists() else {}
 
@@ -249,12 +230,12 @@ def main():
 
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
-        "sources": sources, "stops": stops, "legs": legs, "topups": topups,
+        "history": args.history.name, "rows": len(raw), "stops": stops, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("window.TRAVEL = " + json.dumps(payload, ensure_ascii=False) + ";\n")
     print(f"{len(legs)} legs in {jid + 1} journeys, {len(topups)} top-ups, {len(stops)} stops "
-          f"from {len(sources)} file(s) -> {args.out}")
+          f"from {len(raw)} rows in {args.history.name} -> {args.out}")
 
 
 if __name__ == "__main__":

@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
-"""Download go card travel history CSVs into data/raw/.
+"""Download go card travel history and merge it into the master file data/history.csv.
 
 go card online only exports up to ~6 months per request (longer ranges come back
-empty), so this splits the period into 180-day windows and saves each one to
-data/raw/<YYMMDD>-<YYMMDD>/Travel_history.csv. build.py merges and de-dupes them.
+empty), so any range is split into 180-day windows. Each window is merged into the
+master (overlaps are de-duplicated) and a copy of the untouched export is kept in
+data/raw/<YYMMDD>-<YYMMDD>/Travel_history.csv as a backup.
 
 Modes:
-  (default)      incremental: from a week before the newest trip already in data/raw/ to today
+  (default)      incremental: from a week before the newest trip in the master to today
   --all          walk back from today until two windows in a row have no trips
-  --from/--to    an explicit range (DD/MM/YYYY or YYYY-MM-DD)
+  --years N      the last N years, e.g. --years 6 (any length; split into windows)
+  --from/--to    an explicit range of any length (DD/MM/YYYY or YYYY-MM-DD)
+  --import PATH  merge CSVs you exported by hand (files or folders) without logging in
 
 Credentials: GOCARD_CARD / GOCARD_PASSWORD from the environment, else USERNAME /
 PASSWORD (or GOCARD_CARD / GOCARD_PASSWORD) from .env. USERNAME is deliberately not
 read from the environment, where it is usually your OS login name.
 """
 import argparse
-import csv
 import datetime as dt
 import os
 import pathlib
@@ -23,6 +25,8 @@ import sys
 import time
 
 import requests
+
+from history import Master, parse_rows, read_export
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BASE = "https://gocard.translink.com.au/webtix"
@@ -99,19 +103,6 @@ def save(text, start, end, raw_dir):
     return path
 
 
-def latest_trip_date(raw_dir):
-    latest = None
-    for path in raw_dir.rglob("*.csv"):
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            for row in csv.reader(f):
-                try:
-                    d = dt.datetime.strptime(row[0].strip(), "%d/%b/%Y").date()
-                except (ValueError, IndexError):
-                    continue
-                latest = d if latest is None or d > latest else latest
-    return latest
-
-
 def parse_date(s):
     for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
         try:
@@ -129,51 +120,84 @@ def windows_back(start, end):
         end = w0 - dt.timedelta(days=1)
 
 
+def import_files(paths, master):
+    files = [f for p in paths for f in ([p] if p.is_file() else sorted(p.rglob("*.csv")))]
+    if not files:
+        sys.exit("No CSV files found in " + ", ".join(map(str, paths)))
+    for f in files:
+        added, updated = master.merge(read_export(f))
+        print(f"  {f}: {added} new, {updated} updated")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--all", action="store_true", help="fetch the whole history")
+    mode.add_argument("--years", type=float, help="fetch the last N years")
     mode.add_argument("--from", dest="start", type=parse_date, help="start of an explicit range")
+    mode.add_argument("--import", dest="imports", type=pathlib.Path, nargs="+", metavar="PATH",
+                      help="merge local CSV exports (files or folders) into the master, no download")
     ap.add_argument("--to", dest="end", type=parse_date, help="end of the range (default: today)")
-    ap.add_argument("--raw", type=pathlib.Path, default=ROOT / "data" / "raw", help="where to save exports")
+    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
+                    help="master history file (default: data/history.csv)")
+    ap.add_argument("--raw", type=pathlib.Path, default=ROOT / "data" / "raw",
+                    help="where to keep a copy of each download (default: data/raw)")
+    ap.add_argument("--no-raw", action="store_true", help="don't keep per-window copies")
     ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env", help="credentials file")
     args = ap.parse_args()
+
+    master = Master(args.history)
+    before = len(master.rows)
+    if args.imports:
+        import_files(args.imports, master)
+        print(f"{master.save()} rows in {args.history} ({len(master.rows) - before} new)")
+        return
 
     today = dt.date.today()
     end = args.end or today
     if args.all:
         start = None
+    elif args.years:
+        start = end - dt.timedelta(days=round(args.years * 365.25))
     elif args.start:
         start = args.start
     else:
-        latest = latest_trip_date(args.raw)
+        latest = master.latest_date()
         if latest is None:
-            sys.exit(f"No existing exports in {args.raw} - run with --all for the first download")
+            sys.exit(f"{args.history} is empty - run with --all (or --years N) for the first download, "
+                     f"or --import data/raw to build it from exports you already have")
         start = latest - dt.timedelta(days=OVERLAP_DAYS)
+    if start and start > end:
+        sys.exit("--from is after --to")
 
     card, pw = credentials(args.env)
     s = login(card, pw)
     print(f"Logged in as card ...{card[-4:]}")
-    saved, total, empty_run = [], 0, 0
+    total = added = updated = empty_run = 0
     try:
         for w0, w1 in windows_back(start or dt.date(2000, 1, 1), end):
             res = export(s, w0, w1)
             if res is None:
                 sys.exit(f"The site rejected {w0}..{w1} (range too long?)")
             text, n = res
-            print(f"  {w0:%d %b %Y} - {w1:%d %b %Y}: {n} rows")
             if n:
-                saved.append(save(text, w0, w1, args.raw))
-                total += n
+                if not args.no_raw:
+                    save(text, w0, w1, args.raw)
+                a, u = master.merge(parse_rows(text.splitlines()))
+                master.save()  # after every window, so an interrupted run keeps what it got
+                added, updated, total = added + a, updated + u, total + n
                 empty_run = 0
             else:
                 empty_run += 1
-                if start is None and empty_run >= 2:
-                    break
+                a = u = 0
+            print(f"  {w0:%d %b %Y} - {w1:%d %b %Y}: {n} rows, {a} new, {u} updated")
+            if start is None and empty_run >= 2:
+                break
             time.sleep(DELAY_S)
     finally:
         logout(s)
-    print(f"Saved {total} rows in {len(saved)} file(s) under {args.raw}. Next: python3 scripts/build.py")
+    print(f"Downloaded {total} rows: {added} new, {updated} updated. "
+          f"{len(master.rows)} rows in {args.history}. Next: python3 scripts/build.py")
 
 
 if __name__ == "__main__":
