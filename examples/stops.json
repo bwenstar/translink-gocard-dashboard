@@ -1,0 +1,42 @@
+{
+  "_comment": "Example stop map for examples/history.csv: go card label -> GTFS stop_id (station ids).",
+  "Kedron Brook station": {
+    "stop_id": "place_kedbwy"
+  },
+  "Roma Street busway station": {
+    "stop_id": "place_rompl"
+  },
+  "Cultural Centre station": {
+    "stop_id": "place_ccbs"
+  },
+  "Chermside interchange": {
+    "stop_id": "place_intche"
+  },
+  "UQ Lakes station": {
+    "stop_id": "place_uqlksa"
+  },
+  "Nundah station": {
+    "stop_id": "place_nunsta"
+  },
+  "Central station": {
+    "stop_id": "place_censta"
+  },
+  "Helensvale station": {
+    "stop_id": "place_helsta"
+  },
+  "Helensvale light rail station": {
+    "stop_id": "place_helsta"
+  },
+  "Broadbeach South light rail station": {
+    "stop_id": "place_brsstn"
+  },
+  "South Bank ferry terminal": {
+    "stop_id": "place_soutft"
+  },
+  "New Farm Park ferry terminal": {
+    "stop_id": "place_newfft"
+  },
+  "Riverside ferry terminal": {
+    "stop_id": "place_riveft"
+  }
+}

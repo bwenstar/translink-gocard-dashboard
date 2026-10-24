@@ -1,0 +1,623 @@
+ Date,Time,From,Time,To,Fare,Credit,Balance
+ 03/Nov/2025,07:25 AM,Kedron Brook station,07:42 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 03/Nov/2025,17:50 PM,Roma Street busway station,18:07 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 04/Nov/2025,07:27 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 18.50 
+ 04/Nov/2025,16:57 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 18.00 
+ 05/Nov/2025,07:21 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 17.50 
+ 05/Nov/2025,13:34 PM,Roma Street busway station,13:55 PM,UQ Lakes station,$ 0.50,,$ 17.00 
+ 05/Nov/2025,17:04 PM,UQ Lakes station,17:25 PM,Roma Street busway station,$ 0.50,,$ 16.50 
+ 05/Nov/2025,17:32 PM,Roma Street busway station (Touch on Transfer),17:52 PM,Kedron Brook station,$ 0.00,,$ 16.50 
+ 06/Nov/2025,07:44 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 06/Nov/2025,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 15.50 
+ 07/Nov/2025,07:38 AM,Kedron Brook station,07:58 AM,Roma Street busway station,$ 0.50,,$ 15.00 
+ 07/Nov/2025,17:42 PM,Roma Street busway station,18:02 PM,Kedron Brook station,$ 0.50,,$ 14.50 
+ 10/Nov/2025,07:58 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 14.00 
+ 10/Nov/2025,17:11 PM,Central station,17:31 PM,Nundah station,$ 0.50,,$ 13.50 
+ 11/Nov/2025,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 13.00 
+ 11/Nov/2025,17:48 PM,Roma Street busway station,18:08 PM,Kedron Brook station,$ 0.50,,$ 12.50 
+ 12/Nov/2025,07:25 AM,Kedron Brook station,07:42 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 12/Nov/2025,17:58 PM,Roma Street busway station,18:17 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 13/Nov/2025,08:15 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 11.00 
+ 13/Nov/2025,17:50 PM,Roma Street busway station,18:08 PM,Kedron Brook station,$ 0.50,,$ 10.50 
+ 14/Nov/2025,07:42 AM,Nundah station,08:03 AM,Central station,$ 0.50,,$ 10.00 
+ 14/Nov/2025,17:43 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 9.50 
+ 15/Nov/2025,10:39 AM,Kedron Brook station,11:04 AM,Cultural Centre station,$ 0.50,,$ 9.00 
+ 15/Nov/2025,11:24 AM,South Bank ferry terminal (Touch on Transfer),11:58 AM,New Farm Park ferry terminal,$ 0.00,,$ 9.00 
+ 15/Nov/2025,14:27 PM,New Farm Park ferry terminal,14:47 PM,Riverside ferry terminal,$ 0.50,,$ 8.50 
+ 15/Nov/2025,15:52 PM,Roma Street busway station,16:08 PM,Kedron Brook station,$ 0.50,,$ 8.00 
+ 16/Nov/2025,11:26 AM,Kedron Brook station,11:40 AM,Chermside interchange,$ 0.50,,$ 7.50 
+ 16/Nov/2025,13:45 PM,Chermside interchange,13:55 PM,Kedron Brook station,$ 0.50,,$ 7.00 
+ 17/Nov/2025,07:56 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 6.50 
+ 17/Nov/2025,17:28 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 6.00 
+ 18/Nov/2025,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 5.50 
+ 18/Nov/2025,16:59 PM,Roma Street busway station,17:19 PM,Kedron Brook station,$ 0.50,,$ 5.00 
+ 19/Nov/2025,07:29 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 4.50 
+ 19/Nov/2025,16:42 PM,Auto top up(Central station),,,,$ 20.00,$ 24.50 
+ 19/Nov/2025,16:43 PM,Central station,17:00 PM,Nundah station,$ 0.50,,$ 24.00 
+ 20/Nov/2025,08:00 AM,Kedron Brook station,08:21 AM,Roma Street busway station,$ 0.50,,$ 23.50 
+ 20/Nov/2025,16:50 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 23.00 
+ 22/Nov/2025,10:39 AM,Kedron Brook station,11:04 AM,Cultural Centre station,$ 0.50,,$ 22.50 
+ 22/Nov/2025,11:25 AM,South Bank ferry terminal (Touch on Transfer),11:58 AM,New Farm Park ferry terminal,$ 0.00,,$ 22.50 
+ 22/Nov/2025,15:11 PM,New Farm Park ferry terminal,15:31 PM,Riverside ferry terminal,$ 0.50,,$ 22.00 
+ 22/Nov/2025,16:25 PM,Roma Street busway station,16:43 PM,Kedron Brook station,$ 0.50,,$ 21.50 
+ 23/Nov/2025,11:11 AM,Kedron Brook station,11:25 AM,Chermside interchange,$ 0.50,,$ 21.00 
+ 23/Nov/2025,14:01 PM,Chermside interchange,14:10 PM,Kedron Brook station,$ 0.50,,$ 20.50 
+ 25/Nov/2025,08:00 AM,Kedron Brook station,08:21 AM,Roma Street busway station,$ 0.50,,$ 20.00 
+ 25/Nov/2025,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 26/Nov/2025,07:38 AM,Kedron Brook station,07:59 AM,Roma Street busway station,$ 0.50,,$ 19.00 
+ 26/Nov/2025,17:00 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 27/Nov/2025,07:42 AM,Nundah station,08:03 AM,Central station,$ 0.50,,$ 18.00 
+ 27/Nov/2025,17:12 PM,Central station,17:31 PM,Nundah station,$ 0.50,,$ 17.50 
+ 28/Nov/2025,08:01 AM,Kedron Brook station,08:20 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 28/Nov/2025,16:42 PM,Roma Street busway station,17:02 PM,Kedron Brook station,$ 0.50,,$ 16.50 
+ 29/Nov/2025,10:08 AM,Kedron Brook station,10:34 AM,Cultural Centre station,$ 0.50,,$ 16.00 
+ 29/Nov/2025,10:54 AM,South Bank ferry terminal (Touch on Transfer),11:27 AM,New Farm Park ferry terminal,$ 0.00,,$ 16.00 
+ 29/Nov/2025,15:29 PM,New Farm Park ferry terminal,15:48 PM,Riverside ferry terminal,$ 0.50,,$ 15.50 
+ 29/Nov/2025,16:35 PM,Roma Street busway station,16:52 PM,Kedron Brook station,$ 0.50,,$ 15.00 
+ 01/Dec/2025,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 14.50 
+ 01/Dec/2025,16:57 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 14.00 
+ 03/Dec/2025,07:33 AM,Kedron Brook station,07:52 AM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 03/Dec/2025,13:38 PM,Roma Street busway station,13:59 PM,UQ Lakes station,$ 0.50,,$ 13.00 
+ 03/Dec/2025,16:00 PM,UQ Lakes station,16:20 PM,Roma Street busway station,$ 0.50,,$ 12.50 
+ 03/Dec/2025,16:29 PM,Roma Street busway station (Touch on Transfer),16:47 PM,Kedron Brook station,$ 0.00,,$ 12.50 
+ 04/Dec/2025,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 04/Dec/2025,16:50 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 06/Dec/2025,09:27 AM,Central station,10:41 AM,Helensvale station,$ 0.50,,$ 11.00 
+ 06/Dec/2025,10:55 AM,Helensvale light rail station (Touch on Transfer),11:41 AM,Broadbeach South light rail station,$ 0.00,,$ 11.00 
+ 06/Dec/2025,15:55 PM,Broadbeach South light rail station,16:41 PM,Helensvale light rail station,$ 0.50,,$ 10.50 
+ 06/Dec/2025,16:49 PM,Helensvale station (Touch on Transfer),18:01 PM,Central station,$ 0.00,,$ 10.50 
+ 08/Dec/2025,08:16 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 10.00 
+ 08/Dec/2025,17:00 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 9.50 
+ 09/Dec/2025,07:22 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 9.00 
+ 09/Dec/2025,17:10 PM,Roma Street busway station,17:30 PM,Kedron Brook station,$ 0.50,,$ 8.50 
+ 10/Dec/2025,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 8.00 
+ 10/Dec/2025,16:48 PM,Roma Street busway station,17:07 PM,Kedron Brook station,$ 0.50,,$ 7.50 
+ 11/Dec/2025,08:09 AM,Kedron Brook station,08:28 AM,Roma Street busway station,$ 0.50,,$ 7.00 
+ 11/Dec/2025,17:59 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 6.50 
+ 13/Dec/2025,10:54 AM,Kedron Brook station,11:19 AM,Cultural Centre station,$ 0.50,,$ 6.00 
+ 13/Dec/2025,11:40 AM,South Bank ferry terminal (Touch on Transfer),12:13 PM,New Farm Park ferry terminal,$ 0.00,,$ 6.00 
+ 13/Dec/2025,13:59 PM,New Farm Park ferry terminal,14:18 PM,Riverside ferry terminal,$ 0.50,,$ 5.50 
+ 13/Dec/2025,16:10 PM,Roma Street busway station,16:28 PM,Kedron Brook station,$ 0.50,,$ 5.00 
+ 14/Dec/2025,10:55 AM,Kedron Brook station,11:11 AM,Chermside interchange,$ 0.50,,$ 4.50 
+ 14/Dec/2025,13:14 PM,Auto top up(Chermside interchange),,,,$ 20.00,$ 24.50 
+ 14/Dec/2025,13:15 PM,Chermside interchange,13:25 PM,Kedron Brook station,$ 0.50,,$ 24.00 
+ 15/Dec/2025,08:12 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 23.50 
+ 15/Dec/2025,17:42 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 23.00 
+ 16/Dec/2025,07:46 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 22.50 
+ 16/Dec/2025,17:02 PM,Roma Street busway station,17:21 PM,Kedron Brook station,$ 0.50,,$ 22.00 
+ 18/Dec/2025,07:52 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 21.50 
+ 18/Dec/2025,17:38 PM,Roma Street busway station,17:58 PM,Kedron Brook station,$ 0.50,,$ 21.00 
+ 19/Dec/2025,08:09 AM,Kedron Brook station,08:29 AM,Roma Street busway station,$ 0.50,,$ 20.50 
+ 19/Dec/2025,16:33 PM,Roma Street busway station,16:52 PM,Kedron Brook station,$ 0.50,,$ 20.00 
+ 20/Dec/2025,10:10 AM,Kedron Brook station,10:35 AM,Cultural Centre station,$ 0.50,,$ 19.50 
+ 20/Dec/2025,10:53 AM,South Bank ferry terminal (Touch on Transfer),11:27 AM,New Farm Park ferry terminal,$ 0.00,,$ 19.50 
+ 20/Dec/2025,14:27 PM,New Farm Park ferry terminal,14:48 PM,Riverside ferry terminal,$ 0.50,,$ 19.00 
+ 20/Dec/2025,16:20 PM,Roma Street busway station,16:36 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 28/Dec/2025,10:19 AM,Kedron Brook station,10:30 AM,Chermside interchange,$ 0.50,,$ 18.00 
+ 28/Dec/2025,11:45 AM,Chermside interchange,11:54 AM,Kedron Brook station,$ 0.50,,$ 17.50 
+ 06/Jan/2026,08:13 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 17.00 
+ 06/Jan/2026,17:28 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 16.50 
+ 07/Jan/2026,07:37 AM,Kedron Brook station,07:58 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 07/Jan/2026,16:41 PM,Roma Street busway station,17:02 PM,Kedron Brook station,$ 0.50,,$ 15.50 
+ 08/Jan/2026,07:53 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 15.00 
+ 08/Jan/2026,17:12 PM,Roma Street busway station,17:31 PM,Kedron Brook station,$ 0.50,,$ 14.50 
+ 09/Jan/2026,07:29 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 14.00 
+ 09/Jan/2026,17:11 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 13.50 
+ 10/Jan/2026,10:53 AM,Kedron Brook station,11:20 AM,Cultural Centre station,$ 0.50,,$ 13.00 
+ 10/Jan/2026,11:40 AM,South Bank ferry terminal (Touch on Transfer),12:13 PM,New Farm Park ferry terminal,$ 0.00,,$ 13.00 
+ 10/Jan/2026,13:40 PM,New Farm Park ferry terminal,14:00 PM,Riverside ferry terminal,$ 0.50,,$ 12.50 
+ 10/Jan/2026,15:51 PM,Roma Street busway station,16:09 PM,Kedron Brook station,$ 0.50,,$ 12.00 
+ 11/Jan/2026,10:49 AM,Kedron Brook station,11:00 AM,Chermside interchange,$ 0.50,,$ 11.50 
+ 11/Jan/2026,12:31 PM,Chermside interchange,12:40 PM,Kedron Brook station,$ 0.50,,$ 11.00 
+ 12/Jan/2026,07:23 AM,Kedron Brook station,07:42 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 12/Jan/2026,17:39 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 10.00 
+ 13/Jan/2026,07:30 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 9.50 
+ 13/Jan/2026,17:50 PM,Roma Street busway station,Unknown,Failed to touch Off,$ 5.00,,$ 4.50 
+ 14/Jan/2026,07:26 AM,Auto top up(Nundah station),,,,$ 20.00,$ 24.50 
+ 14/Jan/2026,07:27 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 24.00 
+ 14/Jan/2026,17:42 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 23.50 
+ 15/Jan/2026,08:12 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 23.00 
+ 15/Jan/2026,17:58 PM,Central station,18:15 PM,Nundah station,$ 0.50,,$ 22.50 
+ 16/Jan/2026,07:29 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 22.00 
+ 16/Jan/2026,17:43 PM,Roma Street busway station,18:01 PM,Kedron Brook station,$ 0.50,,$ 21.50 
+ 19/Jan/2026,08:24 AM,Kedron Brook station,08:41 AM,Roma Street busway station,$ 0.50,,$ 21.00 
+ 19/Jan/2026,18:11 PM,Roma Street busway station,Unknown,Failed to touch Off,$ 5.00,,$ 16.00 
+ 20/Jan/2026,07:43 AM,Nundah station,08:03 AM,Central station,$ 0.50,,$ 15.50 
+ 20/Jan/2026,17:41 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 15.00 
+ 21/Jan/2026,07:46 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 14.50 
+ 21/Jan/2026,13:18 PM,Roma Street busway station,13:39 PM,UQ Lakes station,$ 0.50,,$ 14.00 
+ 21/Jan/2026,16:40 PM,UQ Lakes station,17:01 PM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 21/Jan/2026,17:11 PM,Roma Street busway station (Touch on Transfer),17:29 PM,Kedron Brook station,$ 0.00,,$ 13.50 
+ 22/Jan/2026,08:14 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 13.00 
+ 22/Jan/2026,18:13 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 12.50 
+ 23/Jan/2026,07:52 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 23/Jan/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 24/Jan/2026,10:10 AM,Kedron Brook station,10:34 AM,Cultural Centre station,$ 0.50,,$ 11.00 
+ 24/Jan/2026,10:54 AM,South Bank ferry terminal (Touch on Transfer),11:28 AM,New Farm Park ferry terminal,$ 0.00,,$ 11.00 
+ 24/Jan/2026,13:58 PM,New Farm Park ferry terminal,14:17 PM,Riverside ferry terminal,$ 0.50,,$ 10.50 
+ 24/Jan/2026,16:25 PM,Roma Street busway station,16:43 PM,Kedron Brook station,$ 0.50,,$ 10.00 
+ 26/Jan/2026,08:12 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 9.50 
+ 26/Jan/2026,17:27 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 9.00 
+ 27/Jan/2026,07:14 AM,Kedron Brook station,07:32 AM,Roma Street busway station,$ 0.50,,$ 8.50 
+ 27/Jan/2026,17:21 PM,Roma Street busway station,17:39 PM,Kedron Brook station,$ 0.50,,$ 8.00 
+ 28/Jan/2026,08:07 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 7.50 
+ 28/Jan/2026,13:39 PM,Roma Street busway station,14:00 PM,UQ Lakes station,$ 0.50,,$ 7.00 
+ 28/Jan/2026,16:54 PM,UQ Lakes station,17:15 PM,Roma Street busway station,$ 0.50,,$ 6.50 
+ 28/Jan/2026,17:21 PM,Roma Street busway station (Touch on Transfer),17:39 PM,Kedron Brook station,$ 0.00,,$ 6.50 
+ 29/Jan/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 6.00 
+ 29/Jan/2026,17:39 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 5.50 
+ 30/Jan/2026,07:20 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 5.00 
+ 30/Jan/2026,18:03 PM,Roma Street busway station,18:20 PM,Kedron Brook station,$ 0.50,,$ 4.50 
+ 02/Feb/2026,08:16 AM,Auto top up(Kedron Brook station),,,,$ 20.00,$ 24.50 
+ 02/Feb/2026,08:17 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 24.00 
+ 02/Feb/2026,16:51 PM,Roma Street busway station,17:12 PM,Kedron Brook station,$ 0.50,,$ 23.50 
+ 03/Feb/2026,07:52 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 23.00 
+ 03/Feb/2026,17:09 PM,Roma Street busway station,17:30 PM,Kedron Brook station,$ 0.50,,$ 22.50 
+ 04/Feb/2026,08:12 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 22.00 
+ 04/Feb/2026,17:42 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 21.50 
+ 05/Feb/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 21.00 
+ 05/Feb/2026,17:27 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 20.50 
+ 06/Feb/2026,08:05 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 20.00 
+ 06/Feb/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 07/Feb/2026,08:58 AM,Central station,10:11 AM,Helensvale station,$ 0.50,,$ 19.00 
+ 07/Feb/2026,10:21 AM,Helensvale light rail station (Touch on Transfer),11:08 AM,Broadbeach South light rail station,$ 0.00,,$ 19.00 
+ 07/Feb/2026,15:15 PM,Broadbeach South light rail station,16:01 PM,Helensvale light rail station,$ 0.50,,$ 18.50 
+ 07/Feb/2026,16:19 PM,Helensvale station (Touch on Transfer),17:32 PM,Central station,$ 0.00,,$ 18.50 
+ 09/Feb/2026,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 18.00 
+ 09/Feb/2026,17:28 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 17.50 
+ 10/Feb/2026,08:14 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 10/Feb/2026,18:13 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 16.50 
+ 11/Feb/2026,08:16 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 11/Feb/2026,13:08 PM,Roma Street busway station,13:29 PM,UQ Lakes station,$ 0.50,,$ 15.50 
+ 11/Feb/2026,16:09 PM,UQ Lakes station,16:31 PM,Roma Street busway station,$ 0.50,,$ 15.00 
+ 11/Feb/2026,16:38 PM,Roma Street busway station (Touch on Transfer),16:57 PM,Kedron Brook station,$ 0.00,,$ 15.00 
+ 12/Feb/2026,07:37 AM,Kedron Brook station,07:59 AM,Roma Street busway station,$ 0.50,,$ 14.50 
+ 12/Feb/2026,17:01 PM,Roma Street busway station,17:19 PM,Kedron Brook station,$ 0.50,,$ 14.00 
+ 13/Feb/2026,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 13/Feb/2026,17:39 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 13.00 
+ 14/Feb/2026,10:24 AM,Kedron Brook station,10:49 AM,Cultural Centre station,$ 0.50,,$ 12.50 
+ 14/Feb/2026,11:10 AM,South Bank ferry terminal (Touch on Transfer),11:43 AM,New Farm Park ferry terminal,$ 0.00,,$ 12.50 
+ 14/Feb/2026,15:27 PM,New Farm Park ferry terminal,15:47 PM,Riverside ferry terminal,$ 0.50,,$ 12.00 
+ 14/Feb/2026,15:55 PM,Roma Street busway station,16:14 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 16/Feb/2026,08:08 AM,Kedron Brook station,08:29 AM,Roma Street busway station,$ 0.50,,$ 11.00 
+ 16/Feb/2026,17:01 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 10.50 
+ 17/Feb/2026,07:43 AM,Nundah station,08:02 AM,Central station,$ 0.50,,$ 10.00 
+ 17/Feb/2026,17:11 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 9.50 
+ 18/Feb/2026,08:13 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 9.00 
+ 18/Feb/2026,17:41 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 8.50 
+ 20/Feb/2026,07:27 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 8.00 
+ 20/Feb/2026,16:57 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 7.50 
+ 21/Feb/2026,10:10 AM,Kedron Brook station,10:34 AM,Cultural Centre station,$ 0.50,,$ 7.00 
+ 21/Feb/2026,10:54 AM,South Bank ferry terminal (Touch on Transfer),11:27 AM,New Farm Park ferry terminal,$ 0.00,,$ 7.00 
+ 21/Feb/2026,13:57 PM,New Farm Park ferry terminal,14:17 PM,Riverside ferry terminal,$ 0.50,,$ 6.50 
+ 21/Feb/2026,16:04 PM,Roma Street busway station,16:22 PM,Kedron Brook station,$ 0.50,,$ 6.00 
+ 23/Feb/2026,07:28 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 5.50 
+ 23/Feb/2026,16:57 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 5.00 
+ 24/Feb/2026,08:16 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 4.50 
+ 24/Feb/2026,17:57 PM,Auto top up(Roma Street busway station),,,,$ 20.00,$ 24.50 
+ 24/Feb/2026,17:58 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 24.00 
+ 25/Feb/2026,07:57 AM,Nundah station,08:17 AM,Central station,$ 0.50,,$ 23.50 
+ 25/Feb/2026,17:42 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 23.00 
+ 26/Feb/2026,07:13 AM,Nundah station,07:32 AM,Central station,$ 0.50,,$ 22.50 
+ 26/Feb/2026,16:57 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 22.00 
+ 27/Feb/2026,07:53 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 21.50 
+ 27/Feb/2026,17:11 PM,Roma Street busway station,17:29 PM,Kedron Brook station,$ 0.50,,$ 21.00 
+ 28/Feb/2026,10:10 AM,Kedron Brook station,10:35 AM,Cultural Centre station,$ 0.50,,$ 20.50 
+ 28/Feb/2026,10:53 AM,South Bank ferry terminal (Touch on Transfer),11:28 AM,New Farm Park ferry terminal,$ 0.00,,$ 20.50 
+ 28/Feb/2026,15:11 PM,New Farm Park ferry terminal,15:31 PM,Riverside ferry terminal,$ 0.50,,$ 20.00 
+ 28/Feb/2026,16:10 PM,Roma Street busway station,16:29 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 01/Mar/2026,11:41 AM,Kedron Brook station,11:55 AM,Chermside interchange,$ 0.50,,$ 19.00 
+ 01/Mar/2026,14:15 PM,Chermside interchange,14:25 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 02/Mar/2026,07:24 AM,Kedron Brook station,07:42 AM,Roma Street busway station,$ 0.50,,$ 18.00 
+ 02/Mar/2026,18:12 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 17.50 
+ 03/Mar/2026,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 03/Mar/2026,16:43 PM,Roma Street busway station,17:02 PM,Kedron Brook station,$ 0.50,,$ 16.50 
+ 04/Mar/2026,08:15 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 04/Mar/2026,13:28 PM,Roma Street busway station,13:49 PM,UQ Lakes station,$ 0.50,,$ 15.50 
+ 04/Mar/2026,16:29 PM,UQ Lakes station,16:51 PM,Roma Street busway station,$ 0.50,,$ 15.00 
+ 04/Mar/2026,17:00 PM,Roma Street busway station (Touch on Transfer),17:20 PM,Kedron Brook station,$ 0.00,,$ 15.00 
+ 05/Mar/2026,07:38 AM,Kedron Brook station,07:58 AM,Roma Street busway station,$ 0.50,,$ 14.50 
+ 05/Mar/2026,16:49 PM,Roma Street busway station,17:07 PM,Kedron Brook station,$ 0.50,,$ 14.00 
+ 06/Mar/2026,08:23 AM,Kedron Brook station,08:41 AM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 06/Mar/2026,17:51 PM,Roma Street busway station,18:11 PM,Kedron Brook station,$ 0.50,,$ 13.00 
+ 07/Mar/2026,08:59 AM,Central station,10:12 AM,Helensvale station,$ 0.50,,$ 12.50 
+ 07/Mar/2026,10:20 AM,Helensvale light rail station (Touch on Transfer),11:08 AM,Broadbeach South light rail station,$ 0.00,,$ 12.50 
+ 07/Mar/2026,15:05 PM,Broadbeach South light rail station,15:51 PM,Helensvale light rail station,$ 0.50,,$ 12.00 
+ 07/Mar/2026,16:20 PM,Helensvale station (Touch on Transfer),17:31 PM,Central station,$ 0.00,,$ 12.00 
+ 09/Mar/2026,08:13 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 11.50 
+ 09/Mar/2026,17:13 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 11.00 
+ 10/Mar/2026,07:21 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 10/Mar/2026,16:50 PM,Roma Street busway station,17:07 PM,Kedron Brook station,$ 0.50,,$ 10.00 
+ 12/Mar/2026,07:21 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 9.50 
+ 12/Mar/2026,17:59 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 9.00 
+ 13/Mar/2026,08:12 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 8.50 
+ 13/Mar/2026,17:43 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 8.00 
+ 15/Mar/2026,11:12 AM,Kedron Brook station,11:25 AM,Chermside interchange,$ 0.50,,$ 7.50 
+ 15/Mar/2026,13:15 PM,Chermside interchange,13:25 PM,Kedron Brook station,$ 0.50,,$ 7.00 
+ 17/Mar/2026,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 6.50 
+ 17/Mar/2026,16:42 PM,Central station,17:00 PM,Nundah station,$ 0.50,,$ 6.00 
+ 18/Mar/2026,08:15 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 5.50 
+ 18/Mar/2026,13:07 PM,Roma Street busway station,13:30 PM,UQ Lakes station,$ 0.50,,$ 5.00 
+ 18/Mar/2026,16:29 PM,UQ Lakes station,16:50 PM,Roma Street busway station,$ 0.50,,$ 4.50 
+ 18/Mar/2026,16:52 PM,Auto top up(Roma Street busway station),,,,$ 20.00,$ 24.50 
+ 18/Mar/2026,16:53 PM,Roma Street busway station (Touch on Transfer),17:11 PM,Kedron Brook station,$ 0.00,,$ 24.50 
+ 19/Mar/2026,07:58 AM,Nundah station,08:17 AM,Central station,$ 0.50,,$ 24.00 
+ 19/Mar/2026,17:27 PM,Central station,17:45 PM,Nundah station,$ 0.50,,$ 23.50 
+ 20/Mar/2026,08:13 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 23.00 
+ 20/Mar/2026,16:58 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 22.50 
+ 21/Mar/2026,10:53 AM,Kedron Brook station,11:19 AM,Cultural Centre station,$ 0.50,,$ 22.00 
+ 21/Mar/2026,11:40 AM,South Bank ferry terminal (Touch on Transfer),12:12 PM,New Farm Park ferry terminal,$ 0.00,,$ 22.00 
+ 21/Mar/2026,14:57 PM,New Farm Park ferry terminal,15:17 PM,Riverside ferry terminal,$ 0.50,,$ 21.50 
+ 21/Mar/2026,16:10 PM,Roma Street busway station,16:28 PM,Kedron Brook station,$ 0.50,,$ 21.00 
+ 22/Mar/2026,12:05 PM,Kedron Brook station,12:16 PM,Chermside interchange,$ 0.50,,$ 20.50 
+ 22/Mar/2026,14:01 PM,Chermside interchange,14:09 PM,Kedron Brook station,$ 0.50,,$ 20.00 
+ 23/Mar/2026,07:22 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 23/Mar/2026,16:48 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 24/Mar/2026,08:08 AM,Kedron Brook station,08:28 AM,Roma Street busway station,$ 0.50,,$ 18.50 
+ 24/Mar/2026,17:28 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 18.00 
+ 25/Mar/2026,08:12 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 17.50 
+ 25/Mar/2026,17:41 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 17.00 
+ 26/Mar/2026,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 16.50 
+ 26/Mar/2026,16:56 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 16.00 
+ 27/Mar/2026,07:57 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 15.50 
+ 27/Mar/2026,18:11 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 15.00 
+ 28/Mar/2026,09:40 AM,Kedron Brook station,10:04 AM,Cultural Centre station,$ 0.50,,$ 14.50 
+ 28/Mar/2026,10:23 AM,South Bank ferry terminal (Touch on Transfer),10:58 AM,New Farm Park ferry terminal,$ 0.00,,$ 14.50 
+ 28/Mar/2026,15:28 PM,New Farm Park ferry terminal,15:47 PM,Riverside ferry terminal,$ 0.50,,$ 14.00 
+ 28/Mar/2026,15:51 PM,Roma Street busway station,16:09 PM,Kedron Brook station,$ 0.50,,$ 13.50 
+ 29/Mar/2026,11:56 AM,Kedron Brook station,12:11 PM,Chermside interchange,$ 0.50,,$ 13.00 
+ 29/Mar/2026,13:30 PM,Chermside interchange,13:40 PM,Kedron Brook station,$ 0.50,,$ 12.50 
+ 30/Mar/2026,07:56 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 30/Mar/2026,17:00 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 31/Mar/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 11.00 
+ 31/Mar/2026,16:50 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 10.50 
+ 02/Apr/2026,07:30 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 10.00 
+ 02/Apr/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 9.50 
+ 03/Apr/2026,07:59 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 9.00 
+ 03/Apr/2026,17:12 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 8.50 
+ 04/Apr/2026,08:58 AM,Central station,10:12 AM,Helensvale station,$ 0.50,,$ 8.00 
+ 04/Apr/2026,10:22 AM,Helensvale light rail station (Touch on Transfer),11:07 AM,Broadbeach South light rail station,$ 0.00,,$ 8.00 
+ 04/Apr/2026,15:33 PM,Broadbeach South light rail station,16:21 PM,Helensvale light rail station,$ 0.50,,$ 7.50 
+ 04/Apr/2026,16:48 PM,Helensvale station (Touch on Transfer),18:02 PM,Central station,$ 0.00,,$ 7.50 
+ 06/Apr/2026,07:22 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 7.00 
+ 06/Apr/2026,17:42 PM,Roma Street busway station,18:02 PM,Kedron Brook station,$ 0.50,,$ 6.50 
+ 07/Apr/2026,07:43 AM,Nundah station,08:02 AM,Central station,$ 0.50,,$ 6.00 
+ 07/Apr/2026,17:26 PM,Central station,17:45 PM,Nundah station,$ 0.50,,$ 5.50 
+ 08/Apr/2026,07:27 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 5.00 
+ 08/Apr/2026,16:57 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 4.50 
+ 09/Apr/2026,07:56 AM,Auto top up(Nundah station),,,,$ 20.00,$ 24.50 
+ 09/Apr/2026,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 24.00 
+ 09/Apr/2026,17:12 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 23.50 
+ 10/Apr/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 23.00 
+ 10/Apr/2026,18:13 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 22.50 
+ 13/Apr/2026,08:22 AM,Kedron Brook station,08:41 AM,Roma Street busway station,$ 0.50,,$ 22.00 
+ 13/Apr/2026,17:39 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 21.50 
+ 14/Apr/2026,08:16 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 21.00 
+ 14/Apr/2026,17:28 PM,Roma Street busway station,17:47 PM,Kedron Brook station,$ 0.50,,$ 20.50 
+ 15/Apr/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 20.00 
+ 15/Apr/2026,16:58 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 19.50 
+ 19/Apr/2026,10:11 AM,Kedron Brook station,10:26 AM,Chermside interchange,$ 0.50,,$ 19.00 
+ 19/Apr/2026,13:00 PM,Chermside interchange,13:10 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 20/Apr/2026,08:14 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 18.00 
+ 20/Apr/2026,17:12 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 17.50 
+ 22/Apr/2026,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 22/Apr/2026,17:48 PM,Roma Street busway station,18:08 PM,Kedron Brook station,$ 0.50,,$ 16.50 
+ 23/Apr/2026,08:15 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 23/Apr/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 15.50 
+ 24/Apr/2026,07:35 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 15.00 
+ 24/Apr/2026,16:50 PM,Roma Street busway station,17:07 PM,Kedron Brook station,$ 0.50,,$ 14.50 
+ 25/Apr/2026,09:55 AM,Kedron Brook station,10:19 AM,Cultural Centre station,$ 0.50,,$ 14.00 
+ 25/Apr/2026,10:40 AM,South Bank ferry terminal (Touch on Transfer),11:12 AM,New Farm Park ferry terminal,$ 0.00,,$ 14.00 
+ 25/Apr/2026,14:59 PM,New Farm Park ferry terminal,15:17 PM,Riverside ferry terminal,$ 0.50,,$ 13.50 
+ 25/Apr/2026,15:51 PM,Roma Street busway station,16:08 PM,Kedron Brook station,$ 0.50,,$ 13.00 
+ 27/Apr/2026,07:59 AM,Nundah station,08:17 AM,Central station,$ 0.50,,$ 12.50 
+ 27/Apr/2026,17:12 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 12.00 
+ 28/Apr/2026,07:30 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 11.50 
+ 28/Apr/2026,16:42 PM,Roma Street busway station,17:01 PM,Kedron Brook station,$ 0.50,,$ 11.00 
+ 29/Apr/2026,07:59 AM,Kedron Brook station,08:21 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 29/Apr/2026,13:18 PM,Roma Street busway station,13:39 PM,UQ Lakes station,$ 0.50,,$ 10.00 
+ 29/Apr/2026,16:29 PM,UQ Lakes station,16:51 PM,Roma Street busway station,$ 0.50,,$ 9.50 
+ 29/Apr/2026,17:00 PM,Roma Street busway station (Touch on Transfer),17:19 PM,Kedron Brook station,$ 0.00,,$ 9.50 
+ 30/Apr/2026,07:30 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 9.00 
+ 30/Apr/2026,18:00 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 8.50 
+ 01/May/2026,07:53 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 8.00 
+ 01/May/2026,16:29 PM,Roma Street busway station,16:48 PM,Kedron Brook station,$ 0.50,,$ 7.50 
+ 02/May/2026,09:29 AM,Central station,10:41 AM,Helensvale station,$ 0.50,,$ 7.00 
+ 02/May/2026,10:50 AM,Helensvale light rail station (Touch on Transfer),11:37 AM,Broadbeach South light rail station,$ 0.00,,$ 7.00 
+ 02/May/2026,16:03 PM,Broadbeach South light rail station,16:51 PM,Helensvale light rail station,$ 0.50,,$ 6.50 
+ 02/May/2026,17:19 PM,Helensvale station (Touch on Transfer),18:31 PM,Central station,$ 0.00,,$ 6.50 
+ 03/May/2026,10:26 AM,Kedron Brook station,10:41 AM,Chermside interchange,$ 0.50,,$ 6.00 
+ 03/May/2026,12:01 PM,Chermside interchange,12:09 PM,Kedron Brook station,$ 0.50,,$ 5.50 
+ 04/May/2026,07:30 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 5.00 
+ 04/May/2026,16:41 PM,Roma Street busway station,17:02 PM,Kedron Brook station,$ 0.50,,$ 4.50 
+ 06/May/2026,08:05 AM,Auto top up(Kedron Brook station),,,,$ 20.00,$ 24.50 
+ 06/May/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 24.00 
+ 06/May/2026,13:33 PM,Roma Street busway station,13:55 PM,UQ Lakes station,$ 0.50,,$ 23.50 
+ 06/May/2026,17:14 PM,UQ Lakes station,17:35 PM,Roma Street busway station,$ 0.50,,$ 23.00 
+ 06/May/2026,17:40 PM,Roma Street busway station (Touch on Transfer),17:58 PM,Kedron Brook station,$ 0.00,,$ 23.00 
+ 07/May/2026,08:15 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 22.50 
+ 07/May/2026,17:28 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 22.00 
+ 08/May/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 21.50 
+ 08/May/2026,17:10 PM,Roma Street busway station,17:29 PM,Kedron Brook station,$ 0.50,,$ 21.00 
+ 11/May/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 20.50 
+ 11/May/2026,17:13 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 20.00 
+ 12/May/2026,07:52 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 12/May/2026,17:01 PM,Roma Street busway station,17:19 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 13/May/2026,07:20 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 18.50 
+ 13/May/2026,17:39 PM,Roma Street busway station,17:58 PM,Kedron Brook station,$ 0.50,,$ 18.00 
+ 14/May/2026,07:14 AM,Kedron Brook station,07:32 AM,Roma Street busway station,$ 0.50,,$ 17.50 
+ 14/May/2026,17:58 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 17.00 
+ 15/May/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 16.50 
+ 15/May/2026,17:28 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 16.00 
+ 16/May/2026,11:10 AM,Kedron Brook station,11:35 AM,Cultural Centre station,$ 0.50,,$ 15.50 
+ 16/May/2026,11:53 AM,South Bank ferry terminal (Touch on Transfer),12:27 PM,New Farm Park ferry terminal,$ 0.00,,$ 15.50 
+ 16/May/2026,14:10 PM,New Farm Park ferry terminal,14:31 PM,Riverside ferry terminal,$ 0.50,,$ 15.00 
+ 16/May/2026,16:11 PM,Roma Street busway station,16:29 PM,Kedron Brook station,$ 0.50,,$ 14.50 
+ 18/May/2026,07:57 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 14.00 
+ 18/May/2026,17:33 PM,Roma Street busway station,17:51 PM,Kedron Brook station,$ 0.50,,$ 13.50 
+ 19/May/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 13.00 
+ 19/May/2026,17:41 PM,Roma Street busway station,18:01 PM,Kedron Brook station,$ 0.50,,$ 12.50 
+ 20/May/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 20/May/2026,17:29 PM,Roma Street busway station,17:47 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 21/May/2026,07:59 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 11.00 
+ 21/May/2026,17:26 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 10.50 
+ 22/May/2026,08:00 AM,Kedron Brook station,08:20 AM,Roma Street busway station,$ 0.50,,$ 10.00 
+ 22/May/2026,17:00 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 9.50 
+ 25/May/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 9.00 
+ 25/May/2026,18:13 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 8.50 
+ 26/May/2026,07:28 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 8.00 
+ 26/May/2026,17:42 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 7.50 
+ 27/May/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 7.00 
+ 27/May/2026,17:29 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 6.50 
+ 28/May/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 6.00 
+ 28/May/2026,17:31 PM,Roma Street busway station,17:52 PM,Kedron Brook station,$ 0.50,,$ 5.50 
+ 29/May/2026,07:34 AM,Kedron Brook station,07:52 AM,Roma Street busway station,$ 0.50,,$ 5.00 
+ 29/May/2026,16:40 PM,Roma Street busway station,16:58 PM,Kedron Brook station,$ 0.50,,$ 4.50 
+ 31/May/2026,11:49 AM,Auto top up(Kedron Brook station),,,,$ 20.00,$ 24.50 
+ 31/May/2026,11:50 AM,Kedron Brook station,12:00 PM,Chermside interchange,$ 0.50,,$ 24.00 
+ 31/May/2026,14:31 PM,Chermside interchange,14:39 PM,Kedron Brook station,$ 0.50,,$ 23.50 
+ 02/Jun/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 23.00 
+ 02/Jun/2026,17:42 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 22.50 
+ 03/Jun/2026,07:30 AM,Kedron Brook station,07:50 AM,Roma Street busway station,$ 0.50,,$ 22.00 
+ 03/Jun/2026,13:14 PM,Roma Street busway station,13:35 PM,UQ Lakes station,$ 0.50,,$ 21.50 
+ 03/Jun/2026,15:50 PM,UQ Lakes station,16:11 PM,Roma Street busway station,$ 0.50,,$ 21.00 
+ 03/Jun/2026,16:19 PM,Roma Street busway station (Touch on Transfer),16:37 PM,Kedron Brook station,$ 0.00,,$ 21.00 
+ 04/Jun/2026,07:33 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 20.50 
+ 04/Jun/2026,17:32 PM,Roma Street busway station,17:51 PM,Kedron Brook station,$ 0.50,,$ 20.00 
+ 05/Jun/2026,08:23 AM,Kedron Brook station,08:42 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 05/Jun/2026,17:19 PM,Roma Street busway station,17:40 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 06/Jun/2026,09:29 AM,Central station,10:41 AM,Helensvale station,$ 0.50,,$ 18.50 
+ 06/Jun/2026,10:52 AM,Helensvale light rail station (Touch on Transfer),11:37 AM,Broadbeach South light rail station,$ 0.00,,$ 18.50 
+ 06/Jun/2026,16:19 PM,Broadbeach South light rail station,17:05 PM,Helensvale light rail station,$ 0.50,,$ 18.00 
+ 06/Jun/2026,17:18 PM,Helensvale station (Touch on Transfer),18:32 PM,Central station,$ 0.00,,$ 18.00 
+ 08/Jun/2026,07:30 AM,Kedron Brook station,07:50 AM,Roma Street busway station,$ 0.50,,$ 17.50 
+ 08/Jun/2026,17:59 PM,Roma Street busway station,18:17 PM,Kedron Brook station,$ 0.50,,$ 17.00 
+ 09/Jun/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 16.50 
+ 09/Jun/2026,17:11 PM,Roma Street busway station,17:32 PM,Kedron Brook station,$ 0.50,,$ 16.00 
+ 10/Jun/2026,08:22 AM,Kedron Brook station,08:42 AM,Roma Street busway station,$ 0.50,,$ 15.50 
+ 10/Jun/2026,13:18 PM,Roma Street busway station,13:39 PM,UQ Lakes station,$ 0.50,,$ 15.00 
+ 10/Jun/2026,16:45 PM,UQ Lakes station,17:06 PM,Roma Street busway station,$ 0.50,,$ 14.50 
+ 10/Jun/2026,17:10 PM,Roma Street busway station (Touch on Transfer),17:30 PM,Kedron Brook station,$ 0.00,,$ 14.50 
+ 11/Jun/2026,07:12 AM,Nundah station,07:33 AM,Central station,$ 0.50,,$ 14.00 
+ 11/Jun/2026,17:58 PM,Central station,18:16 PM,Nundah station,$ 0.50,,$ 13.50 
+ 12/Jun/2026,08:14 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 13.00 
+ 12/Jun/2026,16:58 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 12.50 
+ 13/Jun/2026,10:53 AM,Kedron Brook station,11:19 AM,Cultural Centre station,$ 0.50,,$ 12.00 
+ 13/Jun/2026,11:40 AM,South Bank ferry terminal (Touch on Transfer),12:12 PM,New Farm Park ferry terminal,$ 0.00,,$ 12.00 
+ 13/Jun/2026,14:29 PM,New Farm Park ferry terminal,14:47 PM,Riverside ferry terminal,$ 0.50,,$ 11.50 
+ 13/Jun/2026,16:05 PM,Roma Street busway station,16:22 PM,Kedron Brook station,$ 0.50,,$ 11.00 
+ 15/Jun/2026,07:57 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 15/Jun/2026,17:43 PM,Roma Street busway station,18:02 PM,Kedron Brook station,$ 0.50,,$ 10.00 
+ 16/Jun/2026,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 9.50 
+ 16/Jun/2026,16:58 PM,Central station,17:16 PM,Nundah station,$ 0.50,,$ 9.00 
+ 17/Jun/2026,07:33 AM,Kedron Brook station,07:52 AM,Roma Street busway station,$ 0.50,,$ 8.50 
+ 17/Jun/2026,13:07 PM,Roma Street busway station,13:29 PM,UQ Lakes station,$ 0.50,,$ 8.00 
+ 17/Jun/2026,15:50 PM,UQ Lakes station,16:11 PM,Roma Street busway station,$ 0.50,,$ 7.50 
+ 17/Jun/2026,16:13 PM,Roma Street busway station (Touch on Transfer),16:31 PM,Kedron Brook station,$ 0.00,,$ 7.50 
+ 19/Jun/2026,08:14 AM,Nundah station,08:33 AM,Central station,$ 0.50,,$ 7.00 
+ 19/Jun/2026,17:11 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 6.50 
+ 22/Jun/2026,07:28 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 6.00 
+ 22/Jun/2026,17:42 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 5.50 
+ 23/Jun/2026,07:27 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 5.00 
+ 23/Jun/2026,17:27 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 4.50 
+ 24/Jun/2026,08:13 AM,Auto top up(Kedron Brook station),,,,$ 20.00,$ 24.50 
+ 24/Jun/2026,08:14 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 24.00 
+ 24/Jun/2026,13:08 PM,Roma Street busway station,13:29 PM,UQ Lakes station,$ 0.50,,$ 23.50 
+ 24/Jun/2026,16:48 PM,UQ Lakes station,17:11 PM,Roma Street busway station,$ 0.50,,$ 23.00 
+ 24/Jun/2026,17:19 PM,Roma Street busway station (Touch on Transfer),17:40 PM,Kedron Brook station,$ 0.00,,$ 23.00 
+ 25/Jun/2026,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 22.50 
+ 25/Jun/2026,16:49 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 22.00 
+ 27/Jun/2026,10:23 AM,Kedron Brook station,10:49 AM,Cultural Centre station,$ 0.50,,$ 21.50 
+ 27/Jun/2026,11:09 AM,South Bank ferry terminal (Touch on Transfer),11:43 AM,New Farm Park ferry terminal,$ 0.00,,$ 21.50 
+ 27/Jun/2026,14:59 PM,New Farm Park ferry terminal,15:18 PM,Riverside ferry terminal,$ 0.50,,$ 21.00 
+ 27/Jun/2026,15:55 PM,Roma Street busway station,16:14 PM,Kedron Brook station,$ 0.50,,$ 20.50 
+ 28/Jun/2026,11:57 AM,Kedron Brook station,12:11 PM,Chermside interchange,$ 0.50,,$ 20.00 
+ 28/Jun/2026,13:30 PM,Chermside interchange,13:40 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 07/Jul/2026,07:23 AM,Kedron Brook station,07:42 AM,Roma Street busway station,$ 0.50,,$ 19.00 
+ 07/Jul/2026,17:00 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 08/Jul/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 18.00 
+ 08/Jul/2026,17:30 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 17.50 
+ 09/Jul/2026,07:53 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 09/Jul/2026,17:39 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 16.50 
+ 10/Jul/2026,07:53 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 16.00 
+ 10/Jul/2026,17:20 PM,Roma Street busway station,17:39 PM,Kedron Brook station,$ 0.50,,$ 15.50 
+ 11/Jul/2026,10:39 AM,Kedron Brook station,11:04 AM,Cultural Centre station,$ 0.50,,$ 15.00 
+ 11/Jul/2026,11:23 AM,South Bank ferry terminal (Touch on Transfer),11:57 AM,New Farm Park ferry terminal,$ 0.00,,$ 15.00 
+ 11/Jul/2026,13:58 PM,New Farm Park ferry terminal,14:17 PM,Riverside ferry terminal,$ 0.50,,$ 14.50 
+ 11/Jul/2026,16:05 PM,Roma Street busway station,16:21 PM,Kedron Brook station,$ 0.50,,$ 14.00 
+ 12/Jul/2026,10:25 AM,Kedron Brook station,10:40 AM,Chermside interchange,$ 0.50,,$ 13.50 
+ 12/Jul/2026,12:15 PM,Chermside interchange,12:25 PM,Kedron Brook station,$ 0.50,,$ 13.00 
+ 13/Jul/2026,07:30 AM,Kedron Brook station,07:50 AM,Roma Street busway station,$ 0.50,,$ 12.50 
+ 13/Jul/2026,17:12 PM,Roma Street busway station,17:31 PM,Kedron Brook station,$ 0.50,,$ 12.00 
+ 14/Jul/2026,07:57 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 11.50 
+ 14/Jul/2026,16:56 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 11.00 
+ 15/Jul/2026,07:46 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 15/Jul/2026,13:13 PM,Roma Street busway station,13:34 PM,UQ Lakes station,$ 0.50,,$ 10.00 
+ 15/Jul/2026,16:04 PM,UQ Lakes station,16:25 PM,Roma Street busway station,$ 0.50,,$ 9.50 
+ 15/Jul/2026,16:29 PM,Roma Street busway station (Touch on Transfer),16:47 PM,Kedron Brook station,$ 0.00,,$ 9.50 
+ 19/Jul/2026,11:40 AM,Kedron Brook station,11:55 AM,Chermside interchange,$ 0.50,,$ 9.00 
+ 19/Jul/2026,13:15 PM,Chermside interchange,13:25 PM,Kedron Brook station,$ 0.50,,$ 8.50 
+ 20/Jul/2026,07:52 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 8.00 
+ 20/Jul/2026,17:29 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 7.50 
+ 21/Jul/2026,07:37 AM,Kedron Brook station,07:58 AM,Roma Street busway station,$ 0.50,,$ 7.00 
+ 21/Jul/2026,18:12 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 6.50 
+ 22/Jul/2026,07:34 AM,Kedron Brook station,07:51 AM,Roma Street busway station,$ 0.50,,$ 6.00 
+ 22/Jul/2026,17:20 PM,Roma Street busway station,17:40 PM,Kedron Brook station,$ 0.50,,$ 5.50 
+ 25/Jul/2026,09:40 AM,Kedron Brook station,10:05 AM,Cultural Centre station,$ 0.50,,$ 5.00 
+ 25/Jul/2026,10:24 AM,South Bank ferry terminal (Touch on Transfer),10:57 AM,New Farm Park ferry terminal,$ 0.00,,$ 5.00 
+ 25/Jul/2026,14:42 PM,New Farm Park ferry terminal,15:01 PM,Riverside ferry terminal,$ 0.50,,$ 4.50 
+ 25/Jul/2026,15:50 PM,Auto top up(Roma Street busway station),,,,$ 20.00,$ 24.50 
+ 25/Jul/2026,15:51 PM,Roma Street busway station,16:08 PM,Kedron Brook station,$ 0.50,,$ 24.00 
+ 27/Jul/2026,08:15 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 23.50 
+ 27/Jul/2026,17:21 PM,Roma Street busway station,17:41 PM,Kedron Brook station,$ 0.50,,$ 23.00 
+ 28/Jul/2026,07:56 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 22.50 
+ 28/Jul/2026,17:33 PM,Roma Street busway station,17:52 PM,Kedron Brook station,$ 0.50,,$ 22.00 
+ 29/Jul/2026,08:14 AM,Nundah station,08:32 AM,Central station,$ 0.50,,$ 21.50 
+ 29/Jul/2026,17:42 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 21.00 
+ 30/Jul/2026,07:53 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 20.50 
+ 30/Jul/2026,16:41 PM,Roma Street busway station,17:02 PM,Kedron Brook station,$ 0.50,,$ 20.00 
+ 31/Jul/2026,07:53 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 31/Jul/2026,17:29 PM,Roma Street busway station,17:47 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 01/Aug/2026,08:59 AM,Central station,10:12 AM,Helensvale station,$ 0.50,,$ 18.50 
+ 01/Aug/2026,10:21 AM,Helensvale light rail station (Touch on Transfer),11:08 AM,Broadbeach South light rail station,$ 0.00,,$ 18.50 
+ 01/Aug/2026,15:04 PM,Broadbeach South light rail station,15:51 PM,Helensvale light rail station,$ 0.50,,$ 18.00 
+ 01/Aug/2026,16:19 PM,Helensvale station (Touch on Transfer),17:31 PM,Central station,$ 0.00,,$ 18.00 
+ 03/Aug/2026,07:29 AM,Nundah station,07:48 AM,Central station,$ 0.50,,$ 17.50 
+ 03/Aug/2026,17:27 PM,Central station,17:45 PM,Nundah station,$ 0.50,,$ 17.00 
+ 04/Aug/2026,07:38 AM,Kedron Brook station,07:58 AM,Roma Street busway station,$ 0.50,,$ 16.50 
+ 04/Aug/2026,16:33 PM,Roma Street busway station,16:52 PM,Kedron Brook station,$ 0.50,,$ 16.00 
+ 05/Aug/2026,08:00 AM,Kedron Brook station,08:21 AM,Roma Street busway station,$ 0.50,,$ 15.50 
+ 05/Aug/2026,17:33 PM,Roma Street busway station,17:51 PM,Kedron Brook station,$ 0.50,,$ 15.00 
+ 06/Aug/2026,07:43 AM,Nundah station,08:02 AM,Central station,$ 0.50,,$ 14.50 
+ 06/Aug/2026,17:28 PM,Central station,17:45 PM,Nundah station,$ 0.50,,$ 14.00 
+ 07/Aug/2026,07:59 AM,Kedron Brook station,08:20 AM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 07/Aug/2026,16:49 PM,Roma Street busway station,17:07 PM,Kedron Brook station,$ 0.50,,$ 13.00 
+ 10/Aug/2026,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 12.50 
+ 10/Aug/2026,18:01 PM,Roma Street busway station,18:21 PM,Kedron Brook station,$ 0.50,,$ 12.00 
+ 11/Aug/2026,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 11.50 
+ 11/Aug/2026,17:00 PM,Roma Street busway station,17:19 PM,Kedron Brook station,$ 0.50,,$ 11.00 
+ 12/Aug/2026,07:22 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 10.50 
+ 12/Aug/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 10.00 
+ 13/Aug/2026,07:44 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 9.50 
+ 13/Aug/2026,17:21 PM,Roma Street busway station,17:39 PM,Kedron Brook station,$ 0.50,,$ 9.00 
+ 14/Aug/2026,08:23 AM,Kedron Brook station,08:41 AM,Roma Street busway station,$ 0.50,,$ 8.50 
+ 14/Aug/2026,16:50 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 8.00 
+ 17/Aug/2026,08:14 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 7.50 
+ 17/Aug/2026,18:23 PM,Roma Street busway station,18:41 PM,Kedron Brook station,$ 0.50,,$ 7.00 
+ 18/Aug/2026,07:20 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 6.50 
+ 18/Aug/2026,18:12 PM,Roma Street busway station,18:31 PM,Kedron Brook station,$ 0.50,,$ 6.00 
+ 19/Aug/2026,07:55 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 5.50 
+ 19/Aug/2026,13:08 PM,Roma Street busway station,13:29 PM,UQ Lakes station,$ 0.50,,$ 5.00 
+ 19/Aug/2026,16:25 PM,UQ Lakes station,16:46 PM,Roma Street busway station,$ 0.50,,$ 4.50 
+ 19/Aug/2026,16:48 PM,Auto top up(Roma Street busway station),,,,$ 20.00,$ 24.50 
+ 19/Aug/2026,16:49 PM,Roma Street busway station (Touch on Transfer),17:07 PM,Kedron Brook station,$ 0.00,,$ 24.50 
+ 20/Aug/2026,07:45 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 24.00 
+ 20/Aug/2026,17:19 PM,Roma Street busway station,17:39 PM,Kedron Brook station,$ 0.50,,$ 23.50 
+ 21/Aug/2026,07:21 AM,Kedron Brook station,07:40 AM,Roma Street busway station,$ 0.50,,$ 23.00 
+ 21/Aug/2026,17:50 PM,Roma Street busway station,18:07 PM,Kedron Brook station,$ 0.50,,$ 22.50 
+ 22/Aug/2026,10:40 AM,Kedron Brook station,11:05 AM,Cultural Centre station,$ 0.50,,$ 22.00 
+ 22/Aug/2026,11:25 AM,South Bank ferry terminal (Touch on Transfer),11:58 AM,New Farm Park ferry terminal,$ 0.00,,$ 22.00 
+ 22/Aug/2026,13:58 PM,New Farm Park ferry terminal,14:18 PM,Riverside ferry terminal,$ 0.50,,$ 21.50 
+ 22/Aug/2026,16:20 PM,Roma Street busway station,16:36 PM,Kedron Brook station,$ 0.50,,$ 21.00 
+ 23/Aug/2026,11:56 AM,Kedron Brook station,12:10 PM,Chermside interchange,$ 0.50,,$ 20.50 
+ 23/Aug/2026,14:15 PM,Chermside interchange,14:25 PM,Kedron Brook station,$ 0.50,,$ 20.00 
+ 24/Aug/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 19.50 
+ 24/Aug/2026,17:01 PM,Roma Street busway station,17:20 PM,Kedron Brook station,$ 0.50,,$ 19.00 
+ 25/Aug/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 18.50 
+ 25/Aug/2026,17:29 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 18.00 
+ 26/Aug/2026,07:43 AM,Nundah station,08:03 AM,Central station,$ 0.50,,$ 17.50 
+ 26/Aug/2026,17:43 PM,Central station,18:01 PM,Nundah station,$ 0.50,,$ 17.00 
+ 27/Aug/2026,07:55 AM,Kedron Brook station,08:15 AM,Roma Street busway station,$ 0.50,,$ 16.50 
+ 27/Aug/2026,17:10 PM,Roma Street busway station,17:30 PM,Kedron Brook station,$ 0.50,,$ 16.00 
+ 28/Aug/2026,07:59 AM,Kedron Brook station,08:20 AM,Roma Street busway station,$ 0.50,,$ 15.50 
+ 28/Aug/2026,17:38 PM,Roma Street busway station,17:58 PM,Kedron Brook station,$ 0.50,,$ 15.00 
+ 29/Aug/2026,09:54 AM,Kedron Brook station,10:19 AM,Cultural Centre station,$ 0.50,,$ 14.50 
+ 29/Aug/2026,10:40 AM,South Bank ferry terminal (Touch on Transfer),11:13 AM,New Farm Park ferry terminal,$ 0.00,,$ 14.50 
+ 29/Aug/2026,13:58 PM,New Farm Park ferry terminal,14:18 PM,Riverside ferry terminal,$ 0.50,,$ 14.00 
+ 29/Aug/2026,16:21 PM,Roma Street busway station,16:37 PM,Kedron Brook station,$ 0.50,,$ 13.50 
+ 30/Aug/2026,11:20 AM,Kedron Brook station,11:31 AM,Chermside interchange,$ 0.50,,$ 13.00 
+ 30/Aug/2026,12:46 PM,Chermside interchange,12:55 PM,Kedron Brook station,$ 0.50,,$ 12.50 
+ 31/Aug/2026,07:33 AM,Kedron Brook station,07:52 AM,Roma Street busway station,$ 0.50,,$ 12.00 
+ 31/Aug/2026,17:50 PM,Roma Street busway station,18:08 PM,Kedron Brook station,$ 0.50,,$ 11.50 
+ 01/Sep/2026,08:00 AM,Kedron Brook station,08:21 AM,Roma Street busway station,$ 0.50,,$ 11.00 
+ 01/Sep/2026,17:19 PM,Roma Street busway station,17:40 PM,Kedron Brook station,$ 0.50,,$ 10.50 
+ 02/Sep/2026,08:05 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 10.00 
+ 02/Sep/2026,13:18 PM,Roma Street busway station,13:40 PM,UQ Lakes station,$ 0.50,,$ 9.50 
+ 02/Sep/2026,16:53 PM,UQ Lakes station,17:15 PM,Roma Street busway station,$ 0.50,,$ 9.00 
+ 02/Sep/2026,17:20 PM,Roma Street busway station (Touch on Transfer),17:40 PM,Kedron Brook station,$ 0.00,,$ 9.00 
+ 04/Sep/2026,08:09 AM,Kedron Brook station,08:28 AM,Roma Street busway station,$ 0.50,,$ 8.50 
+ 04/Sep/2026,16:39 PM,Roma Street busway station,16:58 PM,Kedron Brook station,$ 0.50,,$ 8.00 
+ 05/Sep/2026,08:58 AM,Central station,10:12 AM,Helensvale station,$ 0.50,,$ 7.50 
+ 05/Sep/2026,10:24 AM,Helensvale light rail station (Touch on Transfer),11:12 AM,Broadbeach South light rail station,$ 0.00,,$ 7.50 
+ 05/Sep/2026,16:03 PM,Broadbeach South light rail station,16:50 PM,Helensvale light rail station,$ 0.50,,$ 7.00 
+ 05/Sep/2026,17:18 PM,Helensvale station (Touch on Transfer),18:31 PM,Central station,$ 0.00,,$ 7.00 
+ 07/Sep/2026,08:06 AM,Kedron Brook station,08:24 AM,Roma Street busway station,$ 0.50,,$ 6.50 
+ 07/Sep/2026,17:21 PM,Roma Street busway station,17:42 PM,Kedron Brook station,$ 0.50,,$ 6.00 
+ 08/Sep/2026,08:01 AM,Kedron Brook station,08:20 AM,Roma Street busway station,$ 0.50,,$ 5.50 
+ 08/Sep/2026,17:20 PM,Roma Street busway station,17:40 PM,Kedron Brook station,$ 0.50,,$ 5.00 
+ 10/Sep/2026,07:43 AM,Nundah station,08:03 AM,Central station,$ 0.50,,$ 4.50 
+ 10/Sep/2026,17:11 PM,Auto top up(Central station),,,,$ 20.00,$ 24.50 
+ 10/Sep/2026,17:12 PM,Central station,17:30 PM,Nundah station,$ 0.50,,$ 24.00 
+ 11/Sep/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 23.50 
+ 11/Sep/2026,17:43 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 23.00 
+ 12/Sep/2026,11:10 AM,Kedron Brook station,11:35 AM,Cultural Centre station,$ 0.50,,$ 22.50 
+ 12/Sep/2026,11:55 AM,South Bank ferry terminal (Touch on Transfer),12:27 PM,New Farm Park ferry terminal,$ 0.00,,$ 22.50 
+ 12/Sep/2026,14:59 PM,New Farm Park ferry terminal,15:17 PM,Riverside ferry terminal,$ 0.50,,$ 22.00 
+ 12/Sep/2026,15:50 PM,Roma Street busway station,16:09 PM,Kedron Brook station,$ 0.50,,$ 21.50 
+ 15/Sep/2026,07:28 AM,Nundah station,07:47 AM,Central station,$ 0.50,,$ 21.00 
+ 15/Sep/2026,17:58 PM,Central station,18:15 PM,Nundah station,$ 0.50,,$ 20.50 
+ 16/Sep/2026,08:14 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 20.00 
+ 16/Sep/2026,17:59 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 17/Sep/2026,07:44 AM,Nundah station,08:02 AM,Central station,$ 0.50,,$ 19.00 
+ 17/Sep/2026,17:27 PM,Central station,17:46 PM,Nundah station,$ 0.50,,$ 18.50 
+ 18/Sep/2026,07:59 AM,Nundah station,08:18 AM,Central station,$ 0.50,,$ 18.00 
+ 18/Sep/2026,16:57 PM,Central station,17:15 PM,Nundah station,$ 0.50,,$ 17.50 
+ 19/Sep/2026,09:54 AM,Kedron Brook station,10:20 AM,Cultural Centre station,$ 0.50,,$ 17.00 
+ 19/Sep/2026,10:39 AM,South Bank ferry terminal (Touch on Transfer),11:13 AM,New Farm Park ferry terminal,$ 0.00,,$ 17.00 
+ 19/Sep/2026,14:28 PM,New Farm Park ferry terminal,14:48 PM,Riverside ferry terminal,$ 0.50,,$ 16.50 
+ 19/Sep/2026,15:51 PM,Roma Street busway station,16:09 PM,Kedron Brook station,$ 0.50,,$ 16.00 
+ 21/Sep/2026,08:17 AM,Kedron Brook station,08:34 AM,Roma Street busway station,$ 0.50,,$ 15.50 
+ 21/Sep/2026,16:42 PM,Roma Street busway station,17:01 PM,Kedron Brook station,$ 0.50,,$ 15.00 
+ 22/Sep/2026,07:52 AM,Kedron Brook station,08:14 AM,Roma Street busway station,$ 0.50,,$ 14.50 
+ 22/Sep/2026,16:49 PM,Roma Street busway station,17:08 PM,Kedron Brook station,$ 0.50,,$ 14.00 
+ 23/Sep/2026,08:08 AM,Kedron Brook station,08:28 AM,Roma Street busway station,$ 0.50,,$ 13.50 
+ 23/Sep/2026,13:28 PM,Roma Street busway station,13:50 PM,UQ Lakes station,$ 0.50,,$ 13.00 
+ 23/Sep/2026,16:18 PM,UQ Lakes station,16:40 PM,Roma Street busway station,$ 0.50,,$ 12.50 
+ 23/Sep/2026,16:50 PM,Roma Street busway station (Touch on Transfer),17:08 PM,Kedron Brook station,$ 0.00,,$ 12.50 
+ 24/Sep/2026,07:43 AM,Nundah station,08:02 AM,Central station,$ 0.50,,$ 12.00 
+ 24/Sep/2026,17:41 PM,Central station,18:00 PM,Nundah station,$ 0.50,,$ 11.50 
+ 25/Sep/2026,08:06 AM,Kedron Brook station,08:25 AM,Roma Street busway station,$ 0.50,,$ 11.00 
+ 25/Sep/2026,17:29 PM,Roma Street busway station,17:47 PM,Kedron Brook station,$ 0.50,,$ 10.50 
+ 30/Sep/2026,07:44 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 10.00 
+ 30/Sep/2026,13:09 PM,Roma Street busway station,13:30 PM,UQ Lakes station,$ 0.50,,$ 9.50 
+ 30/Sep/2026,16:20 PM,UQ Lakes station,16:40 PM,Roma Street busway station,$ 0.50,,$ 9.00 
+ 30/Sep/2026,16:50 PM,Roma Street busway station (Touch on Transfer),17:08 PM,Kedron Brook station,$ 0.00,,$ 9.00 
+ 01/Oct/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 8.50 
+ 01/Oct/2026,18:00 PM,Roma Street busway station,18:16 PM,Kedron Brook station,$ 0.50,,$ 8.00 
+ 02/Oct/2026,07:53 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 7.50 
+ 02/Oct/2026,18:02 PM,Roma Street busway station,18:20 PM,Kedron Brook station,$ 0.50,,$ 7.00 
+ 03/Oct/2026,08:58 AM,Central station,10:11 AM,Helensvale station,$ 0.50,,$ 6.50 
+ 03/Oct/2026,10:21 AM,Helensvale light rail station (Touch on Transfer),11:08 AM,Broadbeach South light rail station,$ 0.00,,$ 6.50 
+ 03/Oct/2026,15:54 PM,Broadbeach South light rail station,16:41 PM,Helensvale light rail station,$ 0.50,,$ 6.00 
+ 03/Oct/2026,16:49 PM,Helensvale station (Touch on Transfer),18:01 PM,Central station,$ 0.00,,$ 6.00 
+ 05/Oct/2026,07:20 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 5.50 
+ 05/Oct/2026,17:20 PM,Roma Street busway station,17:39 PM,Kedron Brook station,$ 0.50,,$ 5.00 
+ 06/Oct/2026,07:46 AM,Kedron Brook station,08:04 AM,Roma Street busway station,$ 0.50,,$ 4.50 
+ 06/Oct/2026,16:38 PM,Auto top up(Roma Street busway station),,,,$ 20.00,$ 24.50 
+ 06/Oct/2026,16:39 PM,Roma Street busway station,16:58 PM,Kedron Brook station,$ 0.50,,$ 24.00 
+ 07/Oct/2026,07:21 AM,Kedron Brook station,07:39 AM,Roma Street busway station,$ 0.50,,$ 23.50 
+ 07/Oct/2026,13:12 PM,Roma Street busway station,13:35 PM,UQ Lakes station,$ 0.50,,$ 23.00 
+ 07/Oct/2026,16:29 PM,UQ Lakes station,16:50 PM,Roma Street busway station,$ 0.50,,$ 22.50 
+ 07/Oct/2026,16:52 PM,Roma Street busway station (Touch on Transfer),17:11 PM,Kedron Brook station,$ 0.00,,$ 22.50 
+ 08/Oct/2026,07:46 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 22.00 
+ 08/Oct/2026,18:12 PM,Roma Street busway station,18:30 PM,Kedron Brook station,$ 0.50,,$ 21.50 
+ 09/Oct/2026,08:07 AM,Kedron Brook station,08:28 AM,Roma Street busway station,$ 0.50,,$ 21.00 
+ 09/Oct/2026,17:11 PM,Roma Street busway station,17:30 PM,Kedron Brook station,$ 0.50,,$ 20.50 
+ 13/Oct/2026,08:16 AM,Kedron Brook station,08:33 AM,Roma Street busway station,$ 0.50,,$ 20.00 
+ 13/Oct/2026,17:29 PM,Roma Street busway station,17:48 PM,Kedron Brook station,$ 0.50,,$ 19.50 
+ 14/Oct/2026,07:53 AM,Kedron Brook station,08:13 AM,Roma Street busway station,$ 0.50,,$ 19.00 
+ 14/Oct/2026,17:52 PM,Roma Street busway station,18:12 PM,Kedron Brook station,$ 0.50,,$ 18.50 
+ 15/Oct/2026,08:07 AM,Kedron Brook station,08:24 AM,Roma Street busway station,$ 0.50,,$ 18.00 
+ 15/Oct/2026,17:52 PM,Roma Street busway station,18:11 PM,Kedron Brook station,$ 0.50,,$ 17.50 
+ 16/Oct/2026,07:45 AM,Kedron Brook station,08:03 AM,Roma Street busway station,$ 0.50,,$ 17.00 
+ 16/Oct/2026,17:38 PM,Roma Street busway station,17:57 PM,Kedron Brook station,$ 0.50,,$ 16.50 

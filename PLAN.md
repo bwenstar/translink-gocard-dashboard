@@ -127,6 +127,13 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       reply (the old behaviour was an empty body), and the follow-up probe timed out. The check now
       tests for rows older than 180 days.
 
+### Example data & screenshots
+- [x] `scripts/make_example.py`: a fictional commuter's year from real GTFS trips (bus, train, ferry,
+      light rail, transfers, top-ups, failed touch-offs) -> `examples/`; `build.py --demo` uses it
+- [x] README screenshots in `docs/screenshots/` from the example data. To refresh them, build
+      `--demo --out` into a copy of `dashboard/`, capture at 1280 px wide with headless Chrome, and
+      crop each section.
+
 ### Phase 3 — run it on a schedule
 - [ ] One command: `make update` = fetch history, then build
 - [ ] cron or systemd timer (weekly), plus a notification on login failure or site changes

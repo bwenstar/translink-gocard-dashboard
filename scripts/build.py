@@ -215,9 +215,13 @@ def main():
                     help="GTFS stops.txt (default: data/gtfs/stops.txt)")
     ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip",
                     help="full GTFS feed for route paths; skipped if missing (default: data/gtfs/SEQ_GTFS.zip)")
+    ap.add_argument("--demo", action="store_true",
+                    help="build from the fictional example data in examples/ (no go card account needed)")
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
                     help="generated dashboard data file (default: dashboard/data.js)")
     args = ap.parse_args()
+    if args.demo:
+        args.history, args.stops = ROOT / "examples" / "history.csv", ROOT / "examples" / "stops.json"
 
     master = Master(args.history)
     raw = list(master.rows.values())

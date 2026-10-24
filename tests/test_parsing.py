@@ -172,5 +172,26 @@ class StopNames(unittest.TestCase):
         self.assertEqual(build.guess_stop("Main St (St 9)", self.GTFS)[0], "1")
 
 
+class ExampleData(unittest.TestCase):
+    """examples/ (made by scripts/make_example.py) must stay valid go card data."""
+    ROOT = pathlib.Path(__file__).resolve().parent.parent / "examples"
+
+    def test_parses_with_every_row_type(self):
+        raw = list(Master(self.ROOT / "history.csv").rows.values())
+        self.assertIsNone(fetch_history.header_problem((self.ROOT / "history.csv").read_text()))
+        legs, topups = build.parse_legs(raw)
+        self.assertGreater(len(legs), 500)
+        self.assertTrue(any(l["transfer"] for l in legs))
+        self.assertTrue(any(l["failedTouchOff"] for l in legs))
+        self.assertTrue(topups)
+
+    def test_every_stop_is_mapped(self):
+        import json
+        stops = json.loads((self.ROOT / "stops.json").read_text())
+        legs, _ = build.parse_legs(list(Master(self.ROOT / "history.csv").rows.values()))
+        names = {n for l in legs for n in (l["from"], l["to"]) if n}
+        self.assertEqual(names - set(stops), set())
+
+
 if __name__ == "__main__":
     unittest.main()

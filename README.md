@@ -12,6 +12,27 @@ history goes and then just fetch what's new.
 Everything runs locally. Your card number, password and travel history stay on your machine and
 are gitignored.
 
+![Dashboard overview: KPIs and a map of trips along their actual routes, coloured by mode](docs/screenshots/overview.png)
+
+<sub>Screenshots use the fictional example data in [`examples/`](examples/), not a real person's travel.</sub>
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+**When you travel, by mode and route:** every chart is clickable to filter.
+![Heatmap of tap-ons by weekday and hour, trips per month, legs by mode, top route numbers](docs/screenshots/charts.png)
+
+**Stops, durations and spending**
+![Top stop pairs, most used stops, time on board histogram, spending per month](docs/screenshots/more-charts.png)
+
+**Card balance and every trip:** sortable, with likely route and distance, and exportable to CSV.
+![Card balance over time with top-ups, and the trip table](docs/screenshots/trips.png)
+
+**Dark mode, filtered to train + light rail:** a Gold Coast day trip on the rail network layer.
+![Dark mode with the train and light rail filter: the line to the Gold Coast and the G:link](docs/screenshots/dark-rail.png)
+
+</details>
+
 ## Features
 
 - **Automated download** from go card online with your card number and password. It uses plain
@@ -56,6 +77,21 @@ are gitignored.
 - Python 3.9+
 - [`requests`](https://pypi.org/project/requests/) (`pip install -r requirements.txt`)
 - A go card registered for go card online, with a password
+
+## Try it without an account
+
+The repo includes a year of example travel for a fictional commuter: busway to work, train some
+days, weekend CityCats and a monthly Gold Coast trip by train and light rail. Every trip is a real
+timetabled service.
+
+```bash
+pip install -r requirements.txt
+python3 scripts/fetch_gtfs.py        # Translink's public timetable (~35 MB)
+python3 scripts/build.py --demo      # builds dashboard/data.js from examples/
+xdg-open dashboard/index.html
+```
+
+Run `python3 scripts/build.py` without `--demo` later to switch to your own data.
 
 ## Quick start
 
@@ -123,6 +159,7 @@ Reads `data/history.csv` and writes `dashboard/data.js`. Run it after every down
 | `--stops` | `data/stops.json` (created automatically) |
 | `--gtfs` | `data/gtfs/stops.txt` |
 | `--gtfs-zip` | `data/gtfs/SEQ_GTFS.zip`. Full feed used for route paths; without it, lines are straight |
+| `--demo` | use `examples/history.csv` and `examples/stops.json` |
 | `--out` | `dashboard/data.js` |
 
 ### Stop coordinates: `scripts/fetch_gtfs.py`
@@ -168,10 +205,14 @@ scripts/
   build.py                  history.csv -> dashboard/data.js, stop matching
   routes.py                 likely route per trip and its path, from the GTFS timetable
 docs/
+  screenshots/              README images (from the example data)
   site-contract.json        how go card online works (login form, export, CSV format), checked every run
 tests/
   test_parsing.py           parser, merge and site-check tests (python3 -m unittest discover tests)
   fetch_gtfs.py             Translink GTFS stop list
+  make_example.py           regenerates examples/ from the timetable (fictional commuter, seeded)
+examples/
+  history.csv, stops.json   fictional example data for --demo and the screenshots
 data/
   history.csv               master travel history (gitignored)
   raw/                      backup copy of every download (gitignored)
@@ -281,7 +322,7 @@ These files are personal and are gitignored. Don't commit them:
 | `data/site-snapshots/` | raw go card online pages, including your card details and balance |
 
 Before pushing a fork, check `git status` and
-`git log --all --name-only --format= | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
+`git log --all --name-only --format= | grep -v '^examples/' | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
 The second command should print nothing. Also check your own notes and commit messages for stop
 names or card digits before publishing a fork.
 

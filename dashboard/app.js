@@ -377,7 +377,7 @@
   function fitTo(rows) {
     const pts = [];
     rows.forEach((l) => [l.from, l.to].forEach((n) => n && stops[n] && pts.push([stops[n].lat, stops[n].lon])));
-    if (pts.length) map.fitBounds(pts, { padding: [24, 24], maxZoom: 15 });
+    if (pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
   }
 
   function renderMap(rows) {
@@ -778,9 +778,9 @@
     const tb = $("#trips tbody");
     tb.replaceChildren(...sorted.map((l) => {
       const tr = el("tr", { class: (l.transfer ? "transfer " : "") + (l.journey === state.selJourney ? "sel" : "") });
-      const toCell = el("td", { text: l.to || "" });
+      const toCell = el("td", { class: "stop", text: l.to || "" });
       if (l.failedTouchOff) toCell.append(el("span", { class: "tag bad", text: "failed touch-off" }));
-      const fromCell = el("td", { text: stopName(l.from) });
+      const fromCell = el("td", { class: "stop", text: stopName(l.from) });
       if (l.transfer) fromCell.append(el("span", { class: "tag", text: "transfer" }));
       if (stops[l.from]?.auto || stops[l.to]?.auto) toCell.append(el("span", { class: "tag", text: "stop unverified" }));
       tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }), el("td", { text: hm(l.offD) }),

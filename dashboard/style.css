@@ -126,6 +126,8 @@ select { max-width: 240px; }
 #map { height: 580px; border-radius: 8px; background: var(--seq-0); }
 .leaflet-container { font: inherit; }
 .leaflet-tooltip { font-size: 12px; }
+.leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--ink-2); }
+.leaflet-container .leaflet-control-attribution a { color: var(--s1); }
 
 .chart { width: 100%; position: relative; }
 .chart svg { display: block; overflow: visible; }
@@ -159,6 +161,7 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid
 th { position: sticky; top: 0; background: var(--surface); color: var(--ink-2); font-weight: 600; cursor: pointer; user-select: none; }
 th.sorted::after { content: " ▾"; }
 th.sorted.asc::after { content: " ▴"; }
+td.stop { white-space: normal; min-width: 150px; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 tbody tr { cursor: pointer; }
 tbody tr:hover { background: var(--wash); }
