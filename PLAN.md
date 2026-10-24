@@ -65,8 +65,11 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
   Success redirects to `.../online/summary`. Plain `requests` works, no browser needed.
 - Export: `GET /webtix/cardinfo/history.do?csvExport=yes&startDate=DD/MM/YYYY&endDate=DD/MM/YYYY`
   returns the same CSV as the "Export data to CSV file" link.
-- Ranges over ~6 months come back as an **empty body** (not an error page), so the script
-  uses 180-day windows. Windows before a card's first trip return only a header row.
+- Ranges over ~6 months come back with **no rows** (not an error page), so the script uses
+  180-day windows. Since 2026-10-24 that's a header-only CSV (it used to be an empty body),
+  which looks exactly like a window with no trips. So keep windows under the limit;
+  `--check-site` tests the limit separately. Windows before a card's first trip also return
+  only a header row.
 - The site sits behind Imperva/Incapsula. One session, a 2 s delay between requests and a
   single login attempt per run (never retry a failed login, which risks locking the account).
 
@@ -128,9 +131,8 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       breaking it on purpose (the test must fail).
 - [x] Bug found by the tests: a service that doesn't run on the trip's weekday could still be
       picked using its times from other days. Fixed in routes.py.
-- [ ] Re-run `--check-site` for the 6-month limit: the 2026-10-24 check reported a non-empty 400-day
-      reply (the old behaviour was an empty body), and the follow-up probe timed out. The check now
-      tests for rows older than 180 days.
+- [x] 6-month limit re-checked (2026-10-24, second check): unchanged. A too-long range now
+      returns a header-only CSV instead of an empty body; `--check-site` reports that as unchanged.
 
 ### Example data & screenshots
 - [x] `scripts/make_example.py`: a fictional commuter's year from real GTFS trips (bus, train, ferry,
@@ -142,10 +144,18 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] Live demo on GitHub Pages (`.github/workflows/pages.yml`): `build.py --demo` in CI, with a
       "fictional example data" banner (`demo: true` in data.js) linking back to the repo
 
-### Phase 3 — run it on a schedule
-- [ ] One command: `make update` = fetch history, then build
-- [ ] cron or systemd timer (weekly), plus a notification on login failure or site changes
-- [ ] Optional: serve the dashboard locally or publish a privacy-scrubbed version
+### Phase 3 — run it on a schedule  ✅
+- [x] One command: `make update` (`scripts/update.py`). It refreshes the GTFS feed when older than
+      30 days, fetches incrementally (first run: `--import data/raw` or `--all`), then builds.
+      It writes `data/update.log` and `data/last-update.json`, and only one run happens at a time.
+- [x] Weekly timer: `make schedule` (`scripts/schedule.py`) installs a systemd user timer
+      (Mon 07:00, Persistent, 30 min jitter), or prints a cron line without systemd.
+      Not installed on the dev machine yet; that's the user's call.
+- [x] Notifications on failure (notify-send / osascript, plus `--notify-cmd` /
+      `GOCARD_NOTIFY_CMD` for phone alerts). Failure kinds: login / site-changed / network / error.
+      After a failed login, automatic runs pause until `.env` changes (or `--force`).
+- [x] `make serve`, a local web server for the dashboard. The privacy-scrubbed public version is
+      covered by the fictional-data demo on GitHub Pages.
 
 ### Phase 4 — richer analysis (optional)
 - [x] Draw the actual route path (GTFS `shapes.txt`) instead of straight lines. Dashed straight

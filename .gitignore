@@ -14,3 +14,8 @@ data/stops.json
 data/history.csv
 # private raw pages from fetch_history.py --check-site
 data/site-snapshots/
+# update.py state (log, status, lock, paused-after-failed-login marker)
+data/update.log
+data/last-update.json
+data/.update.lock
+data/.login-failed

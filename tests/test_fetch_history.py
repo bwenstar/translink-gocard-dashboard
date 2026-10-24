@@ -279,6 +279,14 @@ class Runs(FakeSiteCase):
         self.assertEqual({p.name for p in snap.iterdir()},
                          {"login.html", "after-login.html", "history.html", "README.txt"})
 
+    def test_check_site_header_only_answer_means_unchanged(self):
+        def header_only_when_too_long(start, end):
+            if (end - start).days + 1 > 180:
+                return fakes.HEADER + "\n"
+            return "\n".join([fakes.HEADER, fakes.trip_row(end)]) + "\n"
+        self.site(export_override=header_only_when_too_long)
+        self.assertIn("returns only the CSV header", self.run_cli("--check-site"))
+
     def test_check_site_notices_a_lifted_limit(self):
         self.site(max_days=10_000)
         self.assertIn("limit may have been lifted", self.run_cli("--check-site"))

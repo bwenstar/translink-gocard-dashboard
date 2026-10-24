@@ -111,11 +111,12 @@ git clone <this repo> && cd <repo>
 pip install -r requirements.txt
 
 cp .env.example .env && chmod 600 .env   # then fill in your card number (and password)
-python3 scripts/fetch_gtfs.py      # once: Translink stop coordinates
-python3 scripts/fetch_history.py --all
-python3 scripts/build.py
-xdg-open dashboard/index.html      # macOS: open, Windows: start
+make update                        # downloads the timetable and your whole history, builds the dashboard
+make serve                         # open http://localhost:8000
 ```
+
+No `make` (e.g. on Windows)? Every target is one command, so run `python3 scripts/update.py`,
+then open `dashboard/index.html`. The individual steps are under [Usage](#usage).
 
 The first build takes about a minute: it matches every stop you've used to Translink's stop list
 and looks up route paths. After that, builds take under a second. Check the stop guesses it prints
@@ -194,13 +195,66 @@ map and in the table. To check one, look the stop up in `data/gtfs/stops.txt` or
 correct the `stop_id` if needed and delete `auto` and `score`. Your corrections are kept on later
 builds. See `data/stops.example.json` for the format.
 
-## Typical update
+## Keeping it up to date
 
 ```bash
-python3 scripts/fetch_history.py && python3 scripts/build.py
+make update          # or: python3 scripts/update.py
 ```
 
-Then refresh the dashboard.
+One command does it all:
+1. refreshes Translink's timetable if it's more than 30 days old;
+2. downloads new trips (from a week before your newest one);
+3. rebuilds the dashboard.
+
+On a first run it imports `data/raw/` if you have exports there, or downloads your whole history.
+Each run appends to `data/update.log` and writes `data/last-update.json` (when, whether it worked,
+how many new rows).
+
+### Run it weekly
+
+```bash
+make schedule        # install a weekly timer (Mondays 07:00); make schedule-status / make unschedule
+```
+
+- **Linux:** a systemd *user* timer, so no root is needed. A run missed while the computer was off
+  happens at the next start. User timers run while you're logged in; `loginctl enable-linger`
+  lets them run when you're not.
+- **Elsewhere:** `make schedule` prints a crontab line to add. On Windows, point Task Scheduler at
+  `python scripts\update.py`.
+- **Another time:** `python3 scripts/schedule.py install --when "Sun *-*-* 20:00"`. Any systemd
+  calendar expression works.
+
+### When something goes wrong
+
+Failures exit non-zero and send a **desktop notification** (`notify-send` on Linux, Notification
+Center on macOS) that says what kind of failure it was:
+
+| Failure | What it means | What to do |
+|---|---|---|
+| `login` | wrong card number or password | Fix `.env`. **Automatic runs pause** until `.env` changes, so a wrong password is never retried week after week. `update.py --force` overrides the pause. |
+| `site-changed` | go card online no longer matches `docs/site-contract.json` | `make check-site`, then see [If the site changes](#if-the-site-changes) |
+| `network` | the site was down or slow | nothing; the next run tries again |
+| `error` | anything else | see `data/update.log` |
+
+For alerts somewhere else, such as your phone, give it a command (or set `GOCARD_NOTIFY_CMD`):
+
+```bash
+python3 scripts/update.py --notify-cmd 'curl -s -d "$GOCARD_MESSAGE" ntfy.sh/your-private-topic'
+```
+
+The command gets `GOCARD_STATUS` (`ok`/`failed`), `GOCARD_KIND` and `GOCARD_MESSAGE`. Add
+`--notify-success` to hear about successful runs too.
+
+### Other shortcuts
+
+| Command | Does |
+|---|---|
+| `make serve` | serves the dashboard at <http://localhost:8000> |
+| `make build` | rebuilds `dashboard/data.js` only |
+| `make demo` | builds from the fictional example data |
+| `make check-site` | checks go card online still works as recorded |
+| `make gtfs` | re-downloads Translink's timetable |
+| `make test` | runs the tests |
 
 ## Project layout
 
@@ -208,11 +262,14 @@ Then refresh the dashboard.
 .env                        your credentials (gitignored)
 .env.example                template for .env
 requirements.txt
+Makefile                    shortcuts: make update, serve, schedule, test, ...
 README.md                   this file
 PLAN.md                     roadmap and implementation notes
 scripts/
   fetch_history.py          log in, download in 6-month windows, merge into history.csv
   history.py                master file: parse, merge/de-dupe, save
+  update.py                 one command: refresh timetable, fetch new trips, rebuild (make update)
+  schedule.py               install/remove the weekly timer (make schedule)
   build.py                  history.csv -> dashboard/data.js, stop matching
   routes.py                 likely route per trip and its path, from the GTFS timetable
 .github/workflows/
@@ -244,7 +301,7 @@ dashboard/
 **Downloading.** Login is a form `POST` to `/webtix/welcome/welcome.do` with your card number and
 password. The CSV export is
 `/webtix/cardinfo/history.do?csvExport=yes&startDate=DD/MM/YYYY&endDate=DD/MM/YYYY`. Ranges longer
-than about 6 months come back empty, so requests use 180-day windows. The script is careful with
+than about 6 months come back with no rows, so requests use 180-day windows. The script is careful with
 your account: one session per run, a 2-second pause between requests, and it **never retries a
 failed login**, so a wrong password can't lock you out.
 
@@ -334,6 +391,7 @@ These files are personal and are gitignored. Don't commit them:
 | `dashboard/data.js` | all of the above, compiled |
 | `data/gtfs/paths_cache.json` | the stop pairs you travel between |
 | `data/site-snapshots/` | raw go card online pages, including your card details and balance |
+| `data/update.log`, `data/last-update.json` | what each update did, including the last 4 digits of your card |
 
 Before pushing a fork, check `git status` and
 `git log --all --name-only --format= | grep -v '^examples/' | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
@@ -346,7 +404,7 @@ names or card digits before publishing a fork.
 python3 -m unittest discover tests
 ```
 
-About 90 tests, runnable in under a second. They need no network, go card account or Translink
+Over 100 tests, runnable in under a second. They need no network, go card account or Translink
 download: the go card website and the timetable are replaced by fakes in `tests/fakes.py`, a tiny
 made-up town with a bus, train, rail replacement bus, ferry and light rail. GitHub Actions runs
 them on every push (Python 3.10 and 3.14).
@@ -358,6 +416,7 @@ them on every push (Python 3.10 and 3.14).
 | `test_build.py` | Times, stop-name tokens, stop matching from scratch (picks the right one of two same-named streets), stop modes, and a full build on the fake feed |
 | `test_parsing.py`, `test_history.py` | Every CSV row type, money formats, merging and de-duplicating downloads, master file ordering |
 | `test_make_example.py` | The example generator: real-looking CSV, consistent balances, same output for the same seed |
+| `test_update.py` | `make update`: step order, first runs, the timetable refresh. A failed login pauses later runs until `.env` changes. Failure kinds match fetch_history's real messages, crashes are still notified, only one run at a time, the notify command and the timer units. |
 
 The safety rules are checked against deliberate breakage. Disabling any one of them (the login-form
 check, the host check, the CSV column check, the 180-day limit, the rail-replacement filter, the
@@ -409,7 +468,6 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 ## Roadmap
 
 See [PLAN.md](PLAN.md). Next up:
-- `make update` and a scheduled (cron/systemd) weekly fetch with failure notifications
 - on-time comparison against the timetable
 
 ## Disclaimer

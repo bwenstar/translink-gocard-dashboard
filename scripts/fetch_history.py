@@ -2,7 +2,7 @@
 """Download go card travel history and merge it into the master file data/history.csv.
 
 go card online only exports up to ~6 months per request (longer ranges come back
-empty), so any range is split into 180-day windows. Each window is merged into the
+with no rows), so any range is split into 180-day windows. Each window is merged into the
 master (overlaps are de-duplicated) and a copy of the untouched export is kept in
 data/raw/<YYMMDD>-<YYMMDD>/Travel_history.csv as a backup.
 
@@ -255,6 +255,8 @@ def check_site(args):
         elif old:
             print(f"  6-month limit: a 400-day range returned {len(old)} rows older than {WINDOW_DAYS} days "
                   f"- the limit may have been lifted (WINDOW_DAYS could be raised)")
+        elif too_long[1] == 0:
+            print("  6-month limit: unchanged (a 400-day range returns only the CSV header, no rows)")
         else:
             print(f"  6-month limit: a 400-day range returned {too_long[1]} rows but none older than "
                   f"{WINDOW_DAYS} days - still limited, just answered differently (180-day windows still work)")

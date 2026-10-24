@@ -19,7 +19,7 @@
     "page": "/cardinfo/history.do",
     "params": {"csvExport": "yes", "startDate": "DD/MM/YYYY", "endDate": "DD/MM/YYYY"},
     "max_window_days": 180,
-    "too_long_range": "empty response body (not an error page)",
+    "too_long_range": "a CSV with only the header row (seen 2026-10-24; earlier the body was empty). Never an error page.",
     "csv_header": ["Date", "Time", "From", "Time", "To", "Fare", "Credit", "Balance"],
     "date_format": "27/Apr/2026",
     "time_format": "17:20 PM (24-hour clock with a redundant AM/PM suffix)",
