@@ -76,7 +76,7 @@ are gitignored.
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - [`requests`](https://pypi.org/project/requests/) (`pip install -r requirements.txt`)
 - A go card registered for go card online, with a password
 
@@ -337,7 +337,7 @@ python3 -m unittest discover tests
 About 90 tests, runnable in under a second. They need no network, go card account or Translink
 download: the go card website and the timetable are replaced by fakes in `tests/fakes.py`, a tiny
 made-up town with a bus, train, rail replacement bus, ferry and light rail. GitHub Actions runs
-them on every push (Python 3.9 and 3.12).
+them on every push (Python 3.10 and 3.14).
 
 | File | Covers |
 |---|---|

@@ -124,7 +124,7 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
 - [x] `tests/` (87 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
       fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
-      full build), history, make_example; GitHub Actions on push. Each safety rule was verified by
+      full build), history, make_example; GitHub Actions on push (Python 3.10 + 3.14; 3.9 is no longer offered on the Ubuntu 26.04 runners). Each safety rule was verified by
       breaking it on purpose (the test must fail).
 - [x] Bug found by the tests: a service that doesn't run on the trip's weekday could still be
       picked using its times from other days. Fixed in routes.py.
