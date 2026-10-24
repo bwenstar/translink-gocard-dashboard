@@ -7,7 +7,8 @@ The site only exports **6 months at a time**, so every download is merged into o
 master file, `data/history.csv`, de-duplicating overlaps.
 
 This file is the source of truth for where the project is up to. Update the
-checkboxes as phases land.
+checkboxes as phases land, and update README.md in the same commit as any
+user-visible change (commands, flags, layout, features, limitations).
 
 ---
 
@@ -15,7 +16,9 @@ checkboxes as phases land.
 
 ```
 .env                      # USERNAME / PASSWORD for the go card site (never committed)
+README.md                 # user-facing docs, kept in sync with every change
 PLAN.md                   # this file
+requirements.txt, .env.example
 data/
   history.csv             # MASTER: every trip ever downloaded, same columns as an export (gitignored)
   raw/<YYMMDD>-<YYMMDD>/*.csv  # untouched copy of each download, a backup (gitignored)
