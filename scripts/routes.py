@@ -19,7 +19,8 @@ import zipfile
 from collections import defaultdict
 
 NEAR_M = 200
-CACHE_VERSION = 3
+COMPARE_M = 100  # ride-time comparisons only when the timetable's stops are this close to yours (summed)
+CACHE_VERSION = 4  # 4: departures carry the timetabled ride time
 MODES = {0: "tram", 2: "train", 3: "bus", 4: "ferry"}
 
 
@@ -81,7 +82,7 @@ def _cut(shape, a, b):
 
 
 def _find_options(zf, pairs, near, skip_routes):
-    """{pair: [[route_id, shape_id, stopA, stopB, penalty_m, [[minute, weekday_mask], ...]], ...]}"""
+    """{pair: [[route_id, shape_id, stopA, stopB, penalty_m, [[minute, ride_minutes, weekday_mask], ...]], ...]}"""
     want = defaultdict(list)  # gtfs stop_id -> [(name, distance)]
     for name, cands in near.items():
         for sid, d in cands:
@@ -117,7 +118,7 @@ def _find_options(zf, pairs, near, skip_routes):
             for b in c:
                 if a != b and (a, b) in pairs and c[a][0] < c[b][0]:
                     A, B = c[a], c[b]
-                    groups[(a, b)][(route_id, shape_id, A[1], B[1], round(A[3] + B[3]))].add((A[2], mask))
+                    groups[(a, b)][(route_id, shape_id, A[1], B[1], round(A[3] + B[3]))].add((A[2], B[2] - A[2], mask))
     return {p: [list(k) + [sorted(v)] for k, v in g.items()] for p, g in groups.items()}
 
 
@@ -131,11 +132,26 @@ def _load_shapes(zf, shape_ids):
     return {k: [(a, b) for _, a, b in sorted(v)] for k, v in pts.items()}
 
 
-def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
+def feed_dates(zf):
+    """(first, last) ISO dates the feed's timetable covers (feed_info.txt, else calendar.txt)."""
+    iso = lambda d: f"{d[:4]}-{d[4:6]}-{d[6:]}"
+    try:
+        h, it = _table(zf, "feed_info.txt")
+        r = next(it)
+        return iso(r[h["feed_start_date"]]), iso(r[h["feed_end_date"]])
+    except (KeyError, StopIteration):
+        h, it = _table(zf, "calendar.txt")
+        rows = list(it)
+        return iso(min(r[h["start_date"]] for r in rows)), iso(max(r[h["end_date"]] for r in rows))
+
+
+def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None, compare_all=False):
     """Adds "route" (short name), "mode" and "path" (a key into the returned paths) to legs.
 
     name_to_stop: go card name -> GTFS stop_id. expect: go card name -> the mode its stop
     looks like (train station, ferry terminal...); options of another mode are penalised.
+    Legs ridden while this timetable was in force (or every leg with compare_all, for data
+    generated from this timetable) also get "schedDep", "schedMins" and "vsTimetable".
     Returns ({path_key: [[lat, lon], ...]}, stats).
     """
     expect = expect or {}
@@ -159,6 +175,7 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
         h, it = _table(zf, "routes.txt")
         routes = {r[h["route_id"]]: (r[h["route_short_name"]], int(r[h["route_type"]]), r[h["route_long_name"]])
                   for r in it}
+        feed_from, feed_to = feed_dates(zf)
         if todo:
             platforms = [(sid, (float(r["stop_lat"]), float(r["stop_lon"]))) for sid, r in gtfs.items()
                          if r.get("location_type", "0") in ("", "0")]
@@ -184,25 +201,25 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
                 continue
             on = dt.datetime.fromisoformat(l["on"])
             bit, minute = 1 << on.weekday(), on.hour * 60 + on.minute
-            best, best_s = None, math.inf
+            best, best_s, best_dep = None, math.inf, None
             want = {expect.get(l["from"]), expect.get(l["to"])} - {None, "bus"}
             # Only services that run on that weekday compete; if none do (an old trip vs. today's
             # timetable), fall back to every day's departures.
-            runs_today = any(mask & bit for *_, deps in opts for _, mask in deps)
+            runs_today = any(mask & bit for *_, deps in opts for _, _, mask in deps)
             for route_id, shape_id, sa, sb, pen, deps in opts:
-                times = [m for m, mask in deps if mask & bit or not runs_today]
+                times = [(m, ride) for m, ride, mask in deps if mask & bit or not runs_today]
                 if not times:
                     continue
-                gap = min(min(abs(m - minute), abs(m - 1440 - minute)) for m in times)
+                gap, dep = min((min(abs(m - minute), abs(m - 1440 - minute)), (m, ride)) for m, ride in times)
                 s = gap if not l["timeUnknown"] else 0
                 s += pen / 50  # 50 m from the mapped stop ~ 1 minute of timetable gap
                 if want and MODES.get(routes.get(route_id, ("", 3, ""))[1]) not in want:
                     s += 120  # a bus between two train stations only if nothing else fits
                 if s < best_s:
-                    best, best_s = (route_id, shape_id, sa, sb), s
-            chosen.append(best)
+                    best, best_s, best_dep = (route_id, shape_id, sa, sb), s, dep + (pen,)
+            chosen.append(best and best + best_dep)
 
-        need = {f"{sh}:{sa}:{sb}" for c in chosen if c for _, sh, sa, sb in [c]} - cache["paths"].keys()
+        need = {f"{c[1]}:{c[2]}:{c[3]}" for c in chosen if c} - cache["paths"].keys()
         if need:
             shapes = _load_shapes(zf, {k.split(":")[0] for k in need})
             for k in need:
@@ -219,15 +236,26 @@ def infer(legs, name_to_stop, gtfs, zip_path, cache_path, expect=None):
     for l, c in zip(legs, chosen):
         if not c:
             continue
-        route_id, sh, sa, sb = c
+        route_id, sh, sa, sb, dep, ride, off_m = c
         short, rtype, long_name = routes.get(route_id, ("", 3, ""))
         l["route"], l["routeName"], l["mode"] = short or None, long_name or None, MODES.get(rtype, "bus")
+        # Ride time against the timetable: tap-on to tap-off vs. the matched service's scheduled
+        # stop-to-stop time. Only for rides taken while this timetable was in force (an older ride
+        # vs. today's timetable mostly measures how the network has changed since) and only when
+        # the timetable's stops are yours. Departure lateness isn't recorded at all: with frequent
+        # services a late bus matches the next one on time.
+        ridden = l["on"][:10]
+        if (compare_all or feed_from <= ridden <= feed_to) and off_m <= COMPARE_M \
+                and l.get("mins") is not None and not l.get("timeUnknown"):
+            l["schedDep"] = f"{dep // 60 % 24:02d}:{dep % 60:02d}"
+            l["schedMins"] = ride
+            l["vsTimetable"] = l["mins"] - ride
         k = f"{sh}:{sa}:{sb}"
         if k in cache["paths"]:
             l["path"] = k
             paths[k] = cache["paths"][k]
             routed += 1
-    return paths, {"legs": routed, "pairs": len(pairs),
+    return paths, {"legs": routed, "pairs": len(pairs), "feed": [feed_from, feed_to],
                    "unmatched": sorted(f"{a} → {b}" for a, b in pairs if not cache["pairs"].get(pkey(a, b)))}
 
 

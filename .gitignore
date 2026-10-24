@@ -20,3 +20,4 @@ data/cron.log
 data/last-update.json
 data/.update.lock
 data/.login-failed
+data/timetable-checks.json

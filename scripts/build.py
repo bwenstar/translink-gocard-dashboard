@@ -160,6 +160,31 @@ def match_new_stops(names, stop_map, gtfs):
     return new
 
 
+CHECK_FIELDS = ("schedDep", "schedMins", "vsTimetable")
+
+
+def keep_timetable_checks(legs, path):
+    """Ride-vs-timetable results only exist while that ride's timetable is current, so keep
+    them: save new ones to `path` and give earlier ones back to their legs."""
+    key = lambda l: f'{l["on"]}|{l["from"]}|{l["to"]}'
+    try:
+        saved = json.loads(path.read_text())
+    except (OSError, ValueError):
+        saved = {}
+    fresh = 0
+    for l in legs:
+        k = key(l)
+        if "vsTimetable" in l:
+            fresh += k not in saved
+            saved[k] = {f: l[f] for f in CHECK_FIELDS} | {"route": l.get("route")}
+        elif k in saved and saved[k].get("route") in (None, l.get("route")):
+            l.update({f: saved[k][f] for f in CHECK_FIELDS})
+    if saved:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(saved, indent=0, sort_keys=True) + "\n")
+    return fresh
+
+
 def parse_legs(raw):
     """go card CSV rows -> (legs, topups), sorted, with transfer legs grouped into journeys."""
     legs, topups = [], []
@@ -216,6 +241,8 @@ def main():
                     help="GTFS stops.txt (default: data/gtfs/stops.txt)")
     ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip",
                     help="full GTFS feed for route paths; skipped if missing (default: data/gtfs/SEQ_GTFS.zip)")
+    ap.add_argument("--checks", type=pathlib.Path, default=ROOT / "data" / "timetable-checks.json",
+                    help="where ride-vs-timetable results are kept between builds (default: data/timetable-checks.json)")
     ap.add_argument("--demo", action="store_true",
                     help="build from the fictional example data in examples/ (no go card account needed)")
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
@@ -257,17 +284,22 @@ def main():
     if missing:
         print("No coordinates for:", ", ".join(missing))
 
-    paths, net = {}, {}
+    paths, net, feed = {}, {}, None
     if args.gtfs_zip.exists():
         name_to_stop = {n: s["stop_id"] for n, s in stops.items()}
         cache = args.gtfs_zip.parent / "paths_cache.json"
         expect = {n: stop_mode(gtfs[sid]) for n, sid in name_to_stop.items()}
-        paths, st = routes.infer(legs, name_to_stop, gtfs, args.gtfs_zip, cache, expect)
+        # the demo's trips were generated from this very timetable, so all of them compare fairly
+        paths, st = routes.infer(legs, name_to_stop, gtfs, args.gtfs_zip, cache, expect, compare_all=args.demo)
+        feed = st["feed"]
         net = routes.network(args.gtfs_zip, cache)
         print(f"Route paths: {st['legs']} of {len(legs)} legs, {len(st['unmatched'])} of {st['pairs']} stop pairs "
               f"had no timetabled trip (drawn as straight lines)")
     else:
         print(f"No {args.gtfs_zip} - run scripts/fetch_gtfs.py to draw route paths instead of straight lines")
+
+    if not args.demo:
+        keep_timetable_checks(legs, args.checks)
 
     # Mode of each stop: what its matched legs used, else a guess from the GTFS stop.
     seen_modes = {}
@@ -294,7 +326,7 @@ def main():
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
         "demo": args.demo, "repo": os.environ.get("GITHUB_REPOSITORY"),  # repo: set by GitHub Actions
-        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "network": net, "legs": legs, "topups": topups,
+        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "network": net, "timetable": feed, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("window.TRAVEL = " + json.dumps(payload, ensure_ascii=False) + ";\n")

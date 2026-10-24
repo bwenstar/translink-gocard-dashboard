@@ -310,6 +310,7 @@
       { label: "Spent on fares", value: money(spent), sub: journeys.size ? `${money(spent / journeys.size)} per journey` : "" },
       { label: "Distance", value: `${fmtKm(kmTotal)} km`, sub: journeys.size ? `${fmtKm(kmTotal / journeys.size)} km per journey${approx ? ` · ${approx} straight-line` : ""}` : "" },
       { label: "Time on board", value: `${(mins / 60).toFixed(1)} h`, sub: timed.length ? `${Math.round(mins / timed.length)} min per leg` : "" },
+      vsTile(rows),
       { label: "Days travelled", value: daysN.toLocaleString(), sub: spanDays ? `of ${spanDays} days in range` : "" },
       { label: "Longest streak", value: plural(st.best, "day"), sub: st.bestEnd ? `ending ${fmtDate(st.bestEnd)}` : "" },
       { label: "Busiest day", value: busiest ? plural(busiest[1], "leg") : "–", sub: busiest ? fmtDate(parse(busiest[0])) : "" },
@@ -609,6 +610,100 @@
     });
   }
 
+  // ---------- ride time vs timetable ----------
+  const signed = (v) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
+  const medianOf = (xs) => { const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const fmtMin = (v) => `${signed(Math.round(v * 10) / 10)} min`;
+  function vsTile(rows) {
+    const v = rows.map((l) => l.vsTimetable).filter((x) => x != null);
+    if (!v.length) return { label: "Ride vs timetable", value: "–", sub: D.timetable ? `from rides on or after ${fmtDate(parse(D.timetable[0]))}` : "needs the timetable (fetch_gtfs.py)" };
+    const slower = v.filter((x) => x > 0).length;
+    return { label: "Ride vs timetable", value: fmtMin(medianOf(v)), sub: `median of ${plural(v.length, "ride")} · slower on ${Math.round((100 * slower) / v.length)}%` };
+  }
+  // Signed bars around a zero line: slower (+) in the highlight colour, faster (−) in the series colour.
+  function signedColumns(box, data, { label, tipHead, tipRows, onClick }) {
+    box.replaceChildren();
+    const W = box.clientWidth, H = 200, left = 34, bottom = 22, top = 10;
+    const ext = Math.max(2, ...data.map((d) => Math.abs(d.v)));
+    const maxV = niceMax(ext);
+    const s = svg("svg", { width: W, height: H, role: "img", "aria-label": "Ride time vs timetable by hour" }, box);
+    const y = (v) => top + (H - top - bottom) * (0.5 - v / (2 * maxV));
+    [-maxV, 0, maxV].forEach((v) => {
+      svg("line", { class: v ? "grid-line" : "axis-line", x1: left, x2: W, y1: y(v), y2: y(v) }, s);
+      svg("text", { x: left - 6, y: y(v) + 4, "text-anchor": "end", text: v ? signed(v) : "0" }, s);
+    });
+    const band = (W - left) / data.length, bw = Math.max(3, Math.min(22, band - 3));
+    const slow = css("--s2"), fast = css("--s1");
+    data.forEach((d, i) => {
+      const x = left + i * band + (band - bw) / 2, g = svg("g", {}, s);
+      svg("rect", { class: "hit", x: left + i * band, y: top, width: band, height: H - top - bottom }, g);
+      if (d.n) {
+        const y0 = y(0), y1 = y(d.v), h = Math.max(1.5, Math.abs(y1 - y0));
+        svg("rect", { class: "mark", x, y: d.v >= 0 ? y0 - h : y0, width: bw, height: h, rx: Math.min(3, bw / 2), fill: d.v > 0 ? slow : fast }, g);
+      }
+      hoverable(g, (e) => showTip(e, tipHead(d), tipRows(d)), onClick && d.n ? () => onClick(d) : null);
+      if (i % Math.max(1, Math.ceil(data.length / 8)) === 0) svg("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle", text: label(d) }, s);
+    });
+  }
+  function signedBars(box, items) {
+    box.replaceChildren();
+    if (!items.length) return empty(box);
+    const W = box.clientWidth, rowH = 34, barH = 12, mid = Math.round(W * 0.55), valW = 52;
+    const ext = Math.max(1, ...items.map((it) => Math.abs(it.v)));
+    const scale = (Math.min(mid, W - mid) - valW) / ext;
+    const slow = css("--s2"), fast = css("--s1");
+    const s = svg("svg", { width: W, height: items.length * rowH + 4, role: "img", "aria-label": "Ride time vs timetable by route" }, box);
+    svg("line", { class: "axis-line", x1: mid, x2: mid, y1: 0, y2: items.length * rowH }, s);
+    items.forEach((it, i) => {
+      const g = svg("g", { class: it.dim ? "dim" : "" }, s), y = i * rowH;
+      svg("rect", { class: "hit", x: 0, y, width: W, height: rowH }, g);
+      svg("text", { class: "label", x: 0, y: y + 12, text: it.label }, g);
+      const w = Math.max(2, Math.abs(it.v) * scale), x = it.v >= 0 ? mid : mid - w;
+      svg("rect", { class: "mark", x, y: y + 17, width: w, height: barH, rx: 3, fill: it.v > 0 ? slow : fast }, g);
+      svg("text", { class: "value", x: it.v >= 0 ? mid + w + 6 : mid - w - 6, y: y + 27, "text-anchor": it.v >= 0 ? "start" : "end", text: fmtMin(it.v) }, g);
+      hoverable(g, (e) => showTip(e, it.tipHead, it.tip), it.onClick);
+    });
+  }
+  function renderVsTimetable(rows) {
+    const comp = rows.filter((l) => l.vsTimetable != null);
+    const note = $("#vsNote");
+    note.textContent = "Your tap-on to tap-off time minus the timetabled time for the service you most likely caught. Above zero is slower than timetabled. "
+      + "Only rides taken while that timetable was in force are compared, and only where its stops are yours. "
+      + "When a bus actually left isn't shown: with frequent services, a late bus looks like the next one on time.";
+    if (!comp.length) {
+      const msg = !D.timetable ? "Needs Translink's timetable: run scripts/fetch_gtfs.py."
+        : rows.length && legs.some((l) => l.vsTimetable != null) ? "No compared rides match the filters."
+        : `Nothing to compare yet. Rides are compared with the timetable in force on the day, starting with rides from ${fmtDate(parse(D.timetable[0]))}; results build up with each update.`;
+      $("#vsPair").hidden = true; $("#vsEmpty").hidden = false;
+      empty($("#vsEmpty"), msg);
+      return;
+    }
+    $("#vsPair").hidden = false; $("#vsEmpty").hidden = true;
+    const byHour = Array.from({ length: 24 }, (_, h) => ({ h, xs: [] }));
+    comp.forEach((l) => byHour[l.onD.getHours()].xs.push(l.vsTimetable));
+    let h0 = byHour.findIndex((b) => b.xs.length), h1 = 23 - [...byHour].reverse().findIndex((b) => b.xs.length);
+    const data = byHour.slice(h0, h1 + 1).map((b) => ({ h: b.h, n: b.xs.length, v: b.xs.length ? medianOf(b.xs) : 0 }));
+    signedColumns($("#vsHour"), data, {
+      label: (d) => `${String(d.h).padStart(2, "0")}h`,
+      tipHead: (d) => `${String(d.h).padStart(2, "0")}:00–${String(d.h).padStart(2, "0")}:59 tap-ons`,
+      tipRows: (d) => (d.n ? [[fmtMin(d.v), "median vs timetable"], [plural(d.n, "ride"), ""], ["", "click to filter to this hour"]] : [["No compared rides", ""]]),
+      onClick: (d) => toggle("hours", `${d.h}-${d.h + 1}`),
+    });
+    const byRoute = new Map();
+    comp.forEach((l) => { const k = routeKey(l); if (k) (byRoute.get(k) || byRoute.set(k, []).get(k)).push(l); });
+    const top = [...byRoute].sort((a, b) => b[1].length - a[1].length).slice(0, 8);
+    signedBars($("#vsRoute"), top.map(([k, ls]) => {
+      const r = routeInfo.get(k), xs = ls.map((l) => l.vsTimetable), sched = medianOf(ls.map((l) => l.schedMins));
+      return {
+        label: `${MODE_LABEL[r.mode]} ${short(r.label, 30)} · ${plural(xs.length, "ride")}`, v: medianOf(xs), dim: state.route && state.route !== k,
+        tipHead: `${MODE_LABEL[r.mode]} ${r.route}${r.name ? ` · ${r.name}` : ""}`,
+        tip: [[fmtMin(medianOf(xs)), "median vs timetable"], [`${sched} min`, "typical timetabled ride"],
+          [`${xs.filter((x) => x > 0).length} of ${xs.length}`, "rides slower than timetabled"], ["", "click to filter"]],
+        onClick: () => toggle("route", k, { fit: true }),
+      };
+    }));
+  }
+
   function renderDurations(rows) {
     const box = $("#durations");
     const mins = rows.map((l) => l.mins).filter((m) => m != null);
@@ -787,6 +882,8 @@
         el("td", {}, el("i", { class: `swatch ${l.mode}` }), MODE_LABEL[l.mode]),
         el("td", { text: routeLabel(l), title: l.route ? `likely route ${l.route}${l.routeName ? ` (${l.routeName})` : ""}, from the current timetable` : "no timetable match" }),
         fromCell, toCell, el("td", { class: "num", text: l.mins ?? "" }),
+        el("td", { class: "num", text: l.vsTimetable == null ? "" : signed(l.vsTimetable),
+          title: l.vsTimetable == null ? "" : `timetabled ${l.schedMins} min (the ${l.schedDep} ${routeLabel(l)})` }),
         el("td", { class: "num", text: l.km != null ? (l.kmApprox ? "~" : "") + l.km.toFixed(1) : "", title: l.kmApprox ? "straight line between the stops" : "" }),
         el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: money(l.balance) }));
       tr.onclick = () => {
@@ -804,10 +901,10 @@
   }));
 
   function downloadCsv() {
-    const cols = ["date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
+    const cols = ["date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "timetabled_minutes", "vs_timetable", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
     const q = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
     const lines = [cols.join(",")].concat(filtered().map((l) => [
-      ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.km, l.kmApprox ? 1 : 0,
+      ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.schedMins, l.vsTimetable, l.km, l.kmApprox ? 1 : 0,
       l.fare.toFixed(2), l.balance, l.transfer ? 1 : 0, l.failedTouchOff ? 1 : 0, l.journey,
     ].map(q).join(",")));
     const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), download: `go-card-trips-${state.from}-to-${state.to}.csv` });
@@ -832,6 +929,7 @@
     renderRoutes(rows);
     renderStops(rows);
     renderDurations(rows);
+    renderVsTimetable(rows);
     renderSpend(rows);
     renderBalance();
     renderTable(rows);

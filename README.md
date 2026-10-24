@@ -66,6 +66,8 @@ with fictional example data. Nothing to install.
     - trips-per-day calendar, weekday × hour heatmap, weekly/monthly trips
     - legs by mode, top route numbers, top stop pairs, most used stops
     - trip durations, spending per month, card balance with top-ups
+    - **ride time vs timetable**: how much longer or shorter your rides take than timetabled, by
+      time of day and by route (see [How it works](#how-it-works) for what is and isn't measured)
   - **filters**:
     - date range and presets, weekdays, mode, route number, time of day
     - trip type (with a transfer, failed touch-off, no route match, unverified stop)
@@ -395,6 +397,22 @@ their GTFS ids and names. Rail replacement buses in the timetable are ignored. A
 two train stations is only accepted if no train fits. The network layer is one shape per rail,
 ferry and light rail route, simplified to about 25 m.
 
+**Ride time vs timetable.** Each routed ride is compared with the scheduled stop-to-stop time of
+the service it was matched to: tap-off minus tap-on, minus the timetabled minutes. Two rules keep
+it honest:
+- **Only rides taken while that timetable was in force are compared.** An older ride compared
+  with today's timetable mostly measures how the network has changed since (routes are
+  re-routed, stops move, peak timetables get re-padded). Because Translink publishes a new
+  timetable every few weeks, results are saved in `data/timetable-checks.json` and kept after
+  the timetable moves on. Run `make update` regularly (the weekly timer does) and they build up.
+- **Only when the timetable's stops are within 100 m of yours.** A nearby stop on a different
+  path would compare different journeys.
+
+When a bus actually *departed* isn't measured. Rides are matched to the nearest timetabled
+departure, so with services every few minutes a late bus is indistinguishable from the next one
+running on time. The demo compares all its rides, because its fictional trips were generated
+from the current timetable.
+
 **Dashboard.** Plain HTML, CSS and JS with hand-drawn SVG charts and [Leaflet](https://leafletjs.com)
 for the map. Modes use three colour-blind-checked colours (bus blue, rail orange, ferry aqua).
 Light rail shares the rail colour with a dashed line, because a fourth colour can't be told apart
@@ -454,6 +472,7 @@ These files are personal and are gitignored. Don't commit them:
 | `dashboard/data.js` | all of the above, compiled |
 | `data/gtfs/paths_cache.json` | the stop pairs you travel between |
 | `data/site-snapshots/` | raw go card online pages, including your card details and balance |
+| `data/timetable-checks.json` | your ride times compared with the timetable |
 | `data/update.log`, `data/last-update.json`, `data/cron.log` | what each update did, including the last 4 digits of your card |
 
 Before pushing a fork, check `git status` and
@@ -516,6 +535,9 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 
 ## Limitations
 
+- The ride-time comparison starts from your first ride under the timetable you downloaded, so it's
+  empty at first and builds up with each update. Departure punctuality isn't measured at all
+  (see [How it works](#how-it-works)).
 - Works for anyone with a go card online account in South East Queensland: nothing in the code is
   specific to one person. Stops are matched from scratch for each user (check the guesses the
   build prints).
@@ -532,7 +554,7 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 ## Roadmap
 
 See [PLAN.md](PLAN.md). Next up:
-- on-time comparison against the timetable
+- more than one go card per person (one login per card on go card online)
 
 ## Disclaimer
 

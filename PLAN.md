@@ -168,7 +168,16 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       stops within 200 m of the tap-on, then the tap-off; nearest departure on the same weekday.
       Uses the current timetable, so older trips are a best guess; pairs with no current service
       stay straight. Cached in `data/gtfs/paths_cache.json`.
-- [ ] On-time vs. timetable comparison
+- [x] Ride time vs timetable (tap-on to tap-off minus the matched service's scheduled time), by
+      hour and by route, plus a KPI and a table column. What the first attempt showed:
+      - comparing old rides with today's timetable is misleading: re-routed services matched a
+        stop on a different path (a "timetabled" time nearly double the real ride), and rides
+        from before the network redesign looked 15+ min "faster" against today's peak padding;
+      - so only rides inside the feed's own date range are compared, and only within 100 m
+        (summed) of your stops. Results persist in `data/timetable-checks.json` because each
+        feed covers only ~2 months. Real data starts empty and fills as the Pi updates.
+      - departure punctuality isn't measured: nearest-departure matching can't tell a late
+        bus from the next one, so it would be biased towards "on time".
 
 ## How to run (current)
 

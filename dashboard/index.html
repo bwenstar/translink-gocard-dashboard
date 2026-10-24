@@ -116,6 +116,15 @@
     </article>
 
     <article class="card span-2">
+      <header><h2>Ride time vs timetable</h2><p class="muted" id="vsNote">Your tap-on to tap-off time minus the timetabled time for the service you most likely caught. Above zero is slower than timetabled.</p></header>
+      <div id="vsEmpty" hidden></div>
+      <div class="pair" id="vsPair">
+        <div><h3 class="sub-h">By time of day</h3><div id="vsHour" class="chart"></div></div>
+        <div><h3 class="sub-h">By route</h3><div id="vsRoute" class="chart"></div></div>
+      </div>
+    </article>
+
+    <article class="card span-2">
       <header><h2>Card balance</h2><p class="muted">After each trip. Dots mark top-ups. Only the date filter applies.</p></header>
       <div id="balance" class="chart"></div>
     </article>
@@ -127,7 +136,7 @@
         <thead><tr>
           <th data-k="on">Date</th><th data-k="onT">On</th><th data-k="offT">Off</th><th data-k="mode">Mode</th><th data-k="route">Route</th>
           <th data-k="from">From</th><th data-k="to">To</th>
-          <th data-k="mins" class="num">Mins</th><th data-k="km" class="num">km</th><th data-k="fare" class="num">Fare</th><th data-k="balance" class="num">Balance</th>
+          <th data-k="mins" class="num">Mins</th><th data-k="vsTimetable" class="num" title="Minutes slower (+) or faster (−) than timetabled">vs tt</th><th data-k="km" class="num">km</th><th data-k="fare" class="num">Fare</th><th data-k="balance" class="num">Balance</th>
         </tr></thead>
         <tbody></tbody>
       </table></div>

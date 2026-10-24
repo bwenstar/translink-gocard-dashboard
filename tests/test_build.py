@@ -69,6 +69,20 @@ class StopNames(unittest.TestCase):
         self.assertEqual(build.stop_mode(busway), "bus")
 
 
+class TimetableChecks(unittest.TestCase):
+    def test_results_are_kept_after_the_timetable_moves_on(self):
+        path = pathlib.Path(tempfile.mkdtemp()) / "checks.json"
+        leg = {"on": "2026-10-27T08:00:00", "from": "A", "to": "B", "route": "10"}
+        build.keep_timetable_checks([dict(leg, schedDep="08:00", schedMins=15, vsTimetable=4)], path)
+        later = [dict(leg), dict(leg, on="2026-10-28T08:00:00")]          # a new feed: no fresh comparison
+        build.keep_timetable_checks(later, path)
+        self.assertEqual(later[0]["vsTimetable"], 4)
+        self.assertNotIn("vsTimetable", later[1])
+        rerouted = [dict(leg, route="20")]                                # matched differently now: don't reuse
+        build.keep_timetable_checks(rerouted, path)
+        self.assertNotIn("vsTimetable", rerouted[0])
+
+
 def history_csv(rows):
     return "\n".join([fakes.HEADER] + [" " + r + " " for r in rows]) + "\n"
 
@@ -93,7 +107,8 @@ class FullBuild(unittest.TestCase):
 
     def build(self, *extra):
         argv = ["build.py", "--history", str(self.dir / "history.csv"), "--stops", str(self.dir / "stops.json"),
-                "--gtfs", str(self.stops_txt), "--gtfs-zip", str(self.zip), "--out", str(self.dir / "data.js"), *extra]
+                "--gtfs", str(self.stops_txt), "--gtfs-zip", str(self.zip), "--out", str(self.dir / "data.js"),
+                "--checks", str(self.dir / "checks.json"), *extra]
         out = io.StringIO()
         with mock.patch.object(sys, "argv", argv), contextlib.redirect_stdout(out):
             build.main()
@@ -118,6 +133,8 @@ class FullBuild(unittest.TestCase):
         self.assertEqual(set(data["network"]), {"train", "ferry", "tram"})
         self.assertIn("Auto-matched new stops", out)
         self.assertFalse(data["demo"])                                  # your own build never shows the demo banner
+        self.assertTrue((self.dir / "checks.json").exists())            # results kept in the test's own folder
+        self.assertEqual(data["timetable"], ["2025-01-01", "2027-12-31"])
 
     def test_stop_map_written_once_then_reused(self):
         self.build()

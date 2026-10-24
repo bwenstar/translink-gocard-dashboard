@@ -95,6 +95,36 @@ class Infer(unittest.TestCase):
             self.infer([fakes.leg("Alpha Road - 1", "Beta Street - 2", f"{TUE}T08:00")])
         spy.assert_called_once()
 
+    def test_ride_time_vs_timetable(self):
+        legs = [fakes.leg("Alpha Road - 1", "Beta Street - 2", f"{TUE}T07:59", mins=21),   # timetabled 15
+                fakes.leg("Alpha Road - 1", "Beta Street - 2", f"{TUE}T08:29", mins=12),
+                fakes.leg("Alpha Road - 1", "Beta Street - 2", f"{TUE}T08:00", mins=None),  # failed touch-off
+                fakes.leg("Alpha Road - 1", "Beta Street - 2", f"{TUE}T08:00", mins=15, timeUnknown=True)]
+        _, stats = self.infer(legs)
+        self.assertEqual((legs[0]["schedDep"], legs[0]["schedMins"], legs[0]["vsTimetable"]), ("08:00", 15, 6))
+        self.assertEqual(legs[1]["vsTimetable"], -3)
+        self.assertTrue(all("vsTimetable" not in l for l in legs[2:]))
+        self.assertEqual(stats["feed"], ["2025-01-01", "2027-12-31"])   # no feed_info.txt: from calendar.txt
+
+    def test_rides_outside_the_timetable_period_are_not_compared(self):
+        old = [fakes.leg("Alpha Road - 1", "Beta Street - 2", "2024-03-05T08:00", mins=20)]
+        self.infer(old)
+        self.assertEqual(old[0]["route"], "10")                 # still routed, just not compared
+        self.assertNotIn("vsTimetable", old[0])
+        demo = [fakes.leg("Alpha Road - 1", "Beta Street - 2", "2024-03-05T08:00", mins=20)]
+        routes.infer(demo, NAMES, self.gtfs, self.zip, self.cache, EXPECT, compare_all=True)
+        self.assertEqual(demo[0]["vsTimetable"], 5)
+
+    def test_only_compared_when_the_timetable_stops_are_yours(self):
+        # the station shuttle (bus 30) uses stops 44 m from each station: 88 m off in total, within 100
+        legs = [fakes.leg("Xville station", "Yton station", f"{TUE}T07:03", mins=22)]
+        self.infer(legs, expect={})
+        self.assertEqual((legs[0]["route"], legs[0]["schedMins"]), ("30", 21))
+        with mock.patch.object(routes, "COMPARE_M", 50):
+            legs = [fakes.leg("Xville station", "Yton station", f"{TUE}T07:03", mins=22)]
+            self.infer(legs, expect={})
+        self.assertNotIn("vsTimetable", legs[0])
+
     def test_network_has_rail_ferry_and_light_rail_only(self):
         net = routes.network(self.zip, self.cache)
         self.assertEqual(set(net), {"train", "ferry", "tram"})

@@ -145,6 +145,9 @@ select { max-width: 240px; }
 .chart .hover .mark, .chart g.hover > .mark { opacity: .75; }
 .chart .label { fill: var(--ink-2); }
 .chart .dim .mark { opacity: .35; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.sub-h { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
+@media (max-width: 800px) { .pair { grid-template-columns: 1fr; } }
 .chart .value.none { fill: var(--muted); font-style: italic; }
 .chart .value { fill: var(--ink); }
 .empty { color: var(--muted); padding: 24px 0; text-align: center; }
