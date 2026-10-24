@@ -1,7 +1,7 @@
 # Shortcuts. Each target is one script; on Windows run the python3 line directly.
 PY ?= python3
 
-.PHONY: update build demo test check-site gtfs serve schedule schedule-status unschedule
+.PHONY: update build demo test check-site gtfs serve review-stops schedule schedule-status unschedule
 
 update:           ## fetch new trips, refresh the timetable when stale, rebuild
 	$(PY) scripts/update.py
@@ -17,6 +17,8 @@ gtfs:             ## re-download Translink's timetable
 	$(PY) scripts/fetch_gtfs.py
 serve:            ## view the dashboard at http://localhost:8000 (see scripts/serve.py for the network)
 	$(PY) scripts/serve.py
+review-stops:     ## check the stops build.py guessed against the timetable (--apply via ARGS)
+	$(PY) scripts/review_stops.py $(ARGS)
 schedule:         ## run `make update` weekly (systemd user timer, or prints a cron line)
 	$(PY) scripts/schedule.py install
 schedule-status:

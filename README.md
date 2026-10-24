@@ -192,9 +192,15 @@ go card stop labels (`Chermside interchange - Stop B`) don't match GTFS names, s
 "Some Stop - Arrival": { "stop_id": "3956", "auto": true, "score": 0.52 }
 ```
 
-Entries with `"auto": true` are guesses. The build prints them, and the dashboard flags them on the
-map and in the table. To check one, look the stop up in `data/gtfs/stops.txt` or on a map. Then
-correct the `stop_id` if needed and delete `auto` and `score`. Your corrections are kept on later
+Entries with `"auto": true` are guesses. **`make review-stops`** (`python3 scripts/review_stops.py`)
+checks them for you against the timetable. For each guess it looks at which timetable stop your
+matched services actually used nearby, and reports *confirmed*, *suggest* (with the better stop)
+or *check* (nothing to go on). `make review-stops ARGS=--apply` saves the confirmations and any
+correction backed by 2+ rides, keeping a backup in `data/stops.json.bak`.
+
+Guesses are also printed by the build and flagged on the dashboard's map and table. To check one
+by hand, look the stop up in `data/gtfs/stops.txt` or on a map, correct the `stop_id` if needed,
+and delete `auto` and `score`. Your corrections are kept on later
 builds. See `data/stops.example.json` for the format.
 
 ## Keeping it up to date
@@ -314,6 +320,7 @@ To update the code later: `git pull`, then `sudo systemctl restart gocard-dashbo
 |---|---|
 | `make serve` | serves the dashboard at <http://localhost:8000> |
 | `make build` | rebuilds `dashboard/data.js` only |
+| `make review-stops` | checks the stops `build.py` guessed against the timetable (`ARGS=--apply` to save) |
 | `make demo` | builds from the fictional example data |
 | `make check-site` | checks go card online still works as recorded |
 | `make gtfs` | re-downloads Translink's timetable |
@@ -334,6 +341,7 @@ scripts/
   update.py                 one command: refresh timetable, fetch new trips, rebuild (make update)
   schedule.py               install/remove the weekly timer (make schedule)
   build.py                  history.csv -> dashboard/data.js, stop matching
+  review_stops.py           check build.py's stop guesses against the timetable (make review-stops)
   routes.py                 likely route per trip and its path, from the GTFS timetable
 .github/workflows/
   tests.yml                 runs the tests on every push
@@ -498,6 +506,7 @@ them on every push (Python 3.10 and 3.14).
 | `test_build.py` | Times, stop-name tokens, stop matching from scratch (picks the right one of two same-named streets), stop modes, and a full build on the fake feed |
 | `test_parsing.py`, `test_history.py` | Every CSV row type, money formats, merging and de-duplicating downloads, master file ordering |
 | `test_make_example.py` | The example generator: real-looking CSV, consistent balances, same output for the same seed |
+| `test_review_stops.py` | Stop review: guesses are confirmed (including a station whose platforms were used), corrected only with 2+ agreeing rides, mixed or missing evidence is left for you, and a dry run changes nothing |
 | `test_serve.py` | The dashboard server: the right user and password are needed, it won't serve on the network without a password, never lists directories, and can't be tricked into serving files outside `dashboard/` |
 | `test_update.py` | `make update`: step order, first runs, the timetable refresh. A failed login pauses later runs until `.env` changes. Failure kinds match fetch_history's real messages, crashes are still notified, only one run at a time, the notify command and the timer units. |
 

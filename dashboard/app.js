@@ -944,7 +944,7 @@
   }
   const unverified = Object.values(stops).filter((s) => s.auto).length;
   $("#subtitle").textContent = `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
-    (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify in data/stops.json` : "");
+    (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify (make review-stops)` : "");
   readHash();
   setupFilters();
   initMap();

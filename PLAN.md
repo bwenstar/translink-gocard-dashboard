@@ -102,6 +102,10 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `build.py` de-dupes on the touch-on (date, time, stop), newest file wins, so overlapping and
       re-downloaded windows never double count. It also parses driver top-ups, adjustments and
       penalty rows with no time.
+- [x] `scripts/review_stops.py` (`make review-stops`) checks the stop guesses against the
+      timetable stops the matched services used: confirmed / suggest / check, and `--apply` saves
+      the confirmations plus corrections backed by 2+ rides. It resolved all 7 leftover guesses:
+      6 confirmed, 1 moved to the stop that replaced a removed one.
 - [x] Stop matcher: platform-aware, `(St 144)` = stop 144, aliases (RBWH). 84 new stops from the
       full history matched, 7 approximate ones left flagged in `stops.json`.
 - [x] Dashboard handles multi-year ranges: a calendar row per year, monthly bars past ~6 months,
