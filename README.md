@@ -70,6 +70,10 @@ python3 scripts/build.py
 xdg-open dashboard/index.html      # macOS: open, Windows: start
 ```
 
+The first build takes about a minute: it matches every stop you've used to Translink's stop list
+and looks up route paths. After that, builds take under a second. Check the stop guesses it prints
+(see [Checking stop matches](#checking-stop-matches)).
+
 ### `.env`
 
 ```ini
