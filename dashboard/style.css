@@ -73,6 +73,12 @@ p { margin: 2px 0 0; }
 
 .page-head, .filters, main { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .page-head { padding-top: 20px; padding-bottom: 12px; }
+.demo-banner {
+  max-width: 1248px; margin: 0 auto 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px;
+  background: color-mix(in srgb, var(--s1) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--s1) 35%, transparent);
+}
+.demo-banner a { color: var(--s1); font-weight: 600; }
+@media (max-width: 1280px) { .demo-banner { margin-left: 16px; margin-right: 16px; } }
 
 .filters {
   display: flex; flex-direction: column; gap: 8px;

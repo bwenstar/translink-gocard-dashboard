@@ -12,6 +12,7 @@ import datetime as dt
 import difflib
 import json
 import math
+import os
 import pathlib
 import re
 import sys
@@ -292,6 +293,7 @@ def main():
 
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
+        "demo": args.demo, "repo": os.environ.get("GITHUB_REPOSITORY"),  # repo: set by GitHub Actions
         "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "network": net, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -117,6 +117,7 @@ class FullBuild(unittest.TestCase):
         self.assertEqual(data["stops"]["Fern ferry terminal"]["mode"], "ferry")
         self.assertEqual(set(data["network"]), {"train", "ferry", "tram"})
         self.assertIn("Auto-matched new stops", out)
+        self.assertFalse(data["demo"])                                  # your own build never shows the demo banner
 
     def test_stop_map_written_once_then_reused(self):
         self.build()

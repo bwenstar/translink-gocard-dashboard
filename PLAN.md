@@ -139,6 +139,9 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       `--demo --out` into a copy of `dashboard/`, capture at 1280 px wide with headless Chrome, and
       crop each section.
 
+- [x] Live demo on GitHub Pages (`.github/workflows/pages.yml`): `build.py --demo` in CI, with a
+      "fictional example data" banner (`demo: true` in data.js) linking back to the repo
+
 ### Phase 3 — run it on a schedule
 - [ ] One command: `make update` = fetch history, then build
 - [ ] cron or systemd timer (weekly), plus a notification on login failure or site changes

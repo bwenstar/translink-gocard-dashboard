@@ -14,6 +14,9 @@ history goes and then just fetch what's new.
 Everything runs locally. Your card number, password and travel history stay on your machine and
 are gitignored.
 
+**[▶ Try the live demo](https://bwenstar.github.io/translink-gocard-dashboard/)**: the full dashboard
+with fictional example data. Nothing to install.
+
 ![Dashboard overview: KPIs and a map of trips along their actual routes, coloured by mode](docs/screenshots/overview.png)
 
 <sub>Screenshots use the fictional example data in [`examples/`](examples/), not a real person's travel.</sub>
@@ -94,6 +97,12 @@ xdg-open dashboard/index.html
 ```
 
 Run `python3 scripts/build.py` without `--demo` later to switch to your own data.
+
+The [live demo](https://bwenstar.github.io/translink-gocard-dashboard/) is this same build. On each
+push that changes the dashboard, scripts or examples, `.github/workflows/pages.yml` downloads the
+public timetable, runs `build.py --demo` and publishes the result to GitHub Pages. It only ever uses
+`examples/`. A fork can host its own demo: in **Settings → Pages**, set the source to
+**GitHub Actions**.
 
 ## Quick start
 
@@ -206,6 +215,9 @@ scripts/
   history.py                master file: parse, merge/de-dupe, save
   build.py                  history.csv -> dashboard/data.js, stop matching
   routes.py                 likely route per trip and its path, from the GTFS timetable
+.github/workflows/
+  tests.yml                 runs the tests on every push
+  pages.yml                 publishes the demo (example data only) to GitHub Pages
 docs/
   screenshots/              README images (from the example data)
   site-contract.json        how go card online works (login form, export, CSV format), checked every run

@@ -838,6 +838,12 @@
     writeHash();
   }
 
+  if (D.demo) {
+    const link = el("a", { href: D.repo ? `https://github.com/${D.repo}` : "https://github.com/", text: "see the project on GitHub" });
+    $(".page-head").after(el("aside", { class: "demo-banner" },
+      el("strong", { text: "Demo with fictional example data." }),
+      " A made-up commuter's year of real timetabled trips: busway, train, CityCat and light rail. To build this for your own go card, ", link, "."));
+  }
   const unverified = Object.values(stops).filter((s) => s.auto).length;
   $("#subtitle").textContent = `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
     (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify in data/stops.json` : "");
