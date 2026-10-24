@@ -182,12 +182,12 @@ and `routes.txt`. Run it once, and again every so often to pick up timetable cha
 
 ### Checking stop matches
 
-go card stop labels (`Cultural Centre station - Platform 2`) don't match GTFS names, so
+go card stop labels (`Chermside interchange - Stop B`) don't match GTFS names, so
 `build.py` guesses a GTFS stop for each new name and saves it to `data/stops.json`:
 
 ```json
-"Cultural Centre station - Platform 2": { "stop_id": "11168" },
-"Some Stop - Arrival": { "stop_id": "203", "auto": true, "score": 0.52 }
+"Chermside interchange - Stop B": { "stop_id": "3932" },
+"Some Stop - Arrival": { "stop_id": "3956", "auto": true, "score": 0.52 }
 ```
 
 Entries with `"auto": true` are guesses. The build prints them, and the dashboard flags them on the

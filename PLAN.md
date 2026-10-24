@@ -48,8 +48,8 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - `From` ending in `(Touch on Transfer)` = a transfer leg (usually `$ 0.00`), part of the previous leg's journey.
 - `From` = `Auto top up(<stop>)` = a top-up row: empty To/Fare, amount in `Credit`.
 - `To` = `Failed to touch Off`, arrival time `Unknown` = penalty fare.
-- Stop names are go card labels (for example `Cultural Centre station - Platform 2`), which don't
-  match GTFS names (`Cultural Centre station, platform 2`), hence `data/stops.json`.
+- Stop names are go card labels (for example `Chermside interchange - Stop B`), which don't
+  match GTFS names (`Chermside Shopping Centre interchange B`), hence `data/stops.json`.
 - Every value has stray leading/trailing spaces, and money is formatted like `$ 0.50`.
 - Older history has more row types:
   - `Top Up( Eagle Farm Depot )`: topped up with the driver. One row is both the top-up

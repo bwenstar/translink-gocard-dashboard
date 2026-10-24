@@ -74,9 +74,9 @@ def is_platform(tok):
 
 def norm_tokens(name):
     s = name.lower().replace("f/s", " farside ").replace("'", "")
-    s = re.sub(r"\(st (\d+\w?)\)", r"(stop \1)", s)  # "(St 144)" is stop 144, not a street
+    s = re.sub(r"\(st (\d+\w?)\)", r"(stop \1)", s)  # "(St 38)" is stop 38, not a street
     s = re.sub(r"platform (\w+)", r"p\1", s)          # platform numbers aren't stop numbers
-    s = re.sub(r"station, (\d+[a-z]?)$", r"station p\1", s)  # GTFS: "Queen Street station, 1a"
+    s = re.sub(r"station, (\d+[a-z]?)$", r"station p\1", s)  # GTFS platform style: "<name> station, 1a"
     s = s.replace("bus station", "busway")
     s = " ".join(ABBREV.get(t, t) for t in s.split())
     for pat, alias in ALIASES.items():

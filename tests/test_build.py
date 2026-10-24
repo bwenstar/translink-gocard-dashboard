@@ -25,14 +25,14 @@ class Times(unittest.TestCase):
 
 class StopNames(unittest.TestCase):
     def test_tokens(self):
-        self.assertIn("144", build.norm_tokens("Edward St f/s Charlotte St (St 144)"))
+        self.assertIn("38", build.norm_tokens("Gympie Rd f/s Hamilton Rd (St 38)"))
         # "(St N)" is stop N: it must not add a "street" that isn't in the name
         self.assertEqual(build.norm_tokens("Valley Mall (St 5)"), {"valley", "mall", "5"})
-        self.assertIn("street", build.norm_tokens("Edward St"))
-        toks = build.norm_tokens("Queen Street Bus Station - Platform 2a")
+        self.assertIn("street", build.norm_tokens("Hamilton St"))
+        toks = build.norm_tokens("Chermside Bus Station - Platform 2a")
         self.assertIn("p2a", toks)            # platform, not a stop number
         self.assertIn("busway", toks)
-        self.assertIn("p1a", build.norm_tokens("Queen Street station, 1a"))  # GTFS platform style
+        self.assertIn("p1a", build.norm_tokens("Chermside bus station, 1a"))  # GTFS platform style
         self.assertIn("rbwh", build.norm_tokens("Royal Brisbane & Womens Hosp station"))
         self.assertNotIn("stop", build.norm_tokens("Main St stop 9"))
 
