@@ -190,19 +190,109 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       - departure punctuality isn't measured: nearest-departure matching can't tell a late
         bus from the next one, so it would be biased towards "on time".
 
+## Future work
+
+Ideas for later, roughly in order of value for effort. Each has how it would work, what it needs
+and the catch. Tick them off, or move them into a phase, as they land.
+
+### Next up: small and clearly worth it
+
+- [ ] **Choose a licence.** The repo has no `LICENSE`, so legally nobody may reuse or fork it
+      yet. MIT is the usual pick for a small tool like this. This is the owner's decision; then
+      add `LICENSE` and a line in the README.
+- [ ] **Back up the always-on machine's data.** Once the Pi does the downloading it holds the only
+      up-to-date copy of `data/`, and SD cards fail. A weekly encrypted archive (`tar` + `age` or
+      `gpg`) copied to another machine or USB stick, or `rsync` pulled from the desktop whenever
+      it's on. Never to a public or cloud location, per the privacy rule.
+- [ ] **Show update health on the dashboard.** Put `data/last-update.json` into `data.js` and
+      show "updated 3 days ago" in the header, or a warning when the last run failed. The Pi
+      can't pop up notifications, so right now a failure is only visible in `data/update.log`.
+- [ ] **Phone alerts from the Pi.** `update.py --notify-cmd` already exists: wire it to ntfy (a
+      private random topic) or email in the cron line. Messages say what failed, never trip data.
+- [ ] **Run `--check-site` monthly from cron** with the same alert, so a change to Translink's site
+      is noticed before the weekly download breaks.
+- [ ] **Rotate `data/cron.log` and `data/update.log`** (logrotate, or `update.py` keeping the last
+      N runs). They grow forever on a small SD card.
+- [ ] **Close the timetable-comparison gap at feed changes.** `update.py` refreshes the GTFS feed
+      *before* fetching trips, so rides from the last days of an old feed can be downloaded only
+      after a new feed (starting later) has replaced it, and then are never compared. Fix: build
+      with the old feed first, or keep the previous feed until its window has been compared.
+- [ ] **Failed touch-off helper.** List recent failed touch-offs with the likely tap-off stop
+      (from the return trip or usual pattern) and the fare difference, so it's quick to request
+      an adjustment from Translink. It's real money: a failed touch-off is charged as a penalty fare.
+
+### Bigger features
+
+- [ ] **Real departure punctuality from live data.** Translink's GTFS-realtime feeds are public
+      (`gtfsrt.api.translink.com.au/api/realtime/SEQ/TripUpdates` and `/VehiclePositions`;
+      checked 2026-10-24, no key needed). The always-on machine polls them around your usual
+      travel times, for the routes you use only, and stores actual departures. Your rides can
+      then be matched to the *actual* bus, so lateness becomes measurable, which nearest-departure
+      matching can't do. Needs a protobuf decoder (`gtfs-realtime-bindings`, or a minimal
+      stdlib one) and storage under `data/`. Only works going forward.
+- [ ] **Historical timetables for old trips.** Route matching and ride-vs-timetable use today's
+      feed, which misreads trips from before the network redesign. Archived SEQ GTFS feeds
+      (e.g. the Mobility Database or Transitland) would let each trip be matched against the
+      feed that was in force that day. Check the archives' coverage and licence first.
+      Cache per feed under `data/gtfs/`.
+- [ ] **What it would have cost before 50c fares.** `stops.txt` has a `zone_id` per stop, so
+      each leg's zones are known. Needs Translink's historical zone fare tables (peak/off-peak,
+      transfers, the 9-journey rule), so verify those against archived fare pages.
+- [ ] **Install on a phone (PWA).** A manifest and service worker so the Pi-served dashboard can
+      be added to the home screen and opened offline with the last data. Basic auth and
+      service workers need care.
+- [ ] **Self-hosted map tiles.** Tile requests tell Esri which area you're looking at. Caching
+      tiles on the Pi (and vendoring Leaflet) would make the served dashboard fully local.
+      Check the tile licence before caching.
+- [ ] **Household mode.** Separate dashboards, with separate passwords, per person on the same
+      Pi, instead of everyone's cards in one view. Builds on multi-card support plus serve.py
+      serving several directories.
+
+### Dashboard ideas
+
+- [ ] **Compare periods:** this month vs last, this year vs last, before vs after a move or job.
+- [ ] **Year in review:** a one-page summary (busiest day, longest streak, favourite route,
+      distance, "if you'd driven"). Keep it free of locations if it's ever meant to be shared.
+- [ ] **Replay:** animate a day or week of trips on the map.
+- [ ] **Commute detection:** recognise regular trip pairs and their times, then show commute
+      vs other trips separately (it stays local; still never put it in committed examples).
+- [ ] **Scale to long histories:** the table renders every row and `data.js` grows by roughly
+      0.25 MB a year of daily travel. Paginate the table, de-duplicate path geometry, and gzip in `serve.py`.
+
+### Project and code
+
+- [ ] **Packaging:** `pyproject.toml` with a `gocard` command (`gocard update`, `gocard serve`) and
+      a Docker image for 64-bit servers. The 32-bit Pi 3 stays on plain Python.
+- [ ] **Dashboard tests in CI:** the JavaScript (filters, charts, CSV export) has no automated
+      tests. Node isn't on the dev machine, but CI can run Playwright against the demo build,
+      including a screenshot diff using `make_screenshots.py`.
+- [ ] **Linting in CI** (ruff) and `CONTRIBUTING.md` / issue templates if others start using it.
+- [ ] **Other cities' cards** (Opal, myki, ...): split `fetch_history.py` into a site adapter
+      behind a common interface, with a contract file each. Only if there's demand: each site
+      is its own reverse-engineering and maintenance job.
+
+### Rules to keep (learned the hard way)
+
+- No personal examples in committed files: no real stop names, route numbers, card digits,
+  addresses or travel stats in docs, tests or examples. Audit staged changes against your real
+  `.env` and `stops.json` before every push.
+- Everything personal lives in `data/` (all of it gitignored) or `.env`.
+- Tests must never write to `data/`. Give every path a temp-dir override and pass it in tests.
+- Don't trust a number just because it's precise: check suspicious results against the raw
+  data (timetable comparisons, fare and CO₂ estimates) before showing them.
+
 ## How to run (current)
 
 ```bash
-python3 scripts/fetch_gtfs.py           # once, or when stops look stale
-python3 scripts/fetch_history.py --all  # first time: the whole history (or --years 6)
-python3 scripts/fetch_history.py        # afterwards: just what's new, merged into history.csv
-python3 scripts/fetch_history.py --from 2024-01-01 --to 2025-06-30   # any range, any length
-python3 scripts/fetch_history.py --import ~/Downloads/Travel_history.csv   # a manual export
-python3 scripts/build.py                # rebuild dashboard/data.js from history.csv
-xdg-open dashboard/index.html   # or: python3 -m http.server -d dashboard
+make update          # timetable refresh (when stale) + new trips for every card + rebuild
+make serve           # http://localhost:8000 (scripts/serve.py; password needed beyond localhost)
+make schedule        # weekly systemd timer on a desktop; on a server, see README's cron line
+make review-stops    # check stop guesses against the timetable (ARGS=--apply to save)
+make check-site      # does go card online still match docs/site-contract.json?
+make demo            # build from the fictional example data
+make test            # unit tests
+python3 scripts/make_screenshots.py   # refresh README screenshots (demo data only)
 ```
 
-`build.py` takes `--history`, `--stops`, `--gtfs` and `--out` to point at other locations
-(see `python3 scripts/build.py --help`). New stop names are auto-matched and saved
-to `stops.json` with `"auto": true`. The dashboard flags them, so check and fix the
-`stop_id` and delete the flag.
+The individual steps (`fetch_gtfs.py`, `fetch_history.py --all/--years/--from/--import/--card`,
+`build.py --history/--stops/--gtfs/--out`) are documented in README.md under Usage.

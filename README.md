@@ -600,8 +600,10 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md). Next up:
-- more than one go card per person (one login per card on go card online)
+See [PLAN.md](PLAN.md#future-work) for the full list. Next up:
+- a licence, backups of the always-on machine's data, and update health on the dashboard
+- real departure punctuality from Translink's public live feeds
+- historical timetables, so old trips match the network as it was
 
 ## Disclaimer
 
