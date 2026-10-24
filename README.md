@@ -238,7 +238,9 @@ One command does it all:
 
 On a first run it imports `data/raw/` if you have exports there, or downloads your whole history.
 Each run appends to `data/update.log` and writes `data/last-update.json` (when, whether it worked,
-how many new rows).
+how many new rows). It also writes `dashboard/status.js`, so the dashboard header says "updated 3 days
+ago". A red banner appears when the last run failed (even though that run didn't rebuild the dashboard)
+or when there's been no update for more than 10 days.
 
 ### Run it weekly
 
@@ -518,6 +520,7 @@ there are private by default. These are the personal files, and none of them sho
 | `data/site-snapshots/` | raw go card online pages, including your card details and balance |
 | `data/timetable-checks.json` | your ride times compared with the timetable |
 | `data/update.log`, `data/last-update.json`, `data/cron.log` | what each update did, including the last 4 digits of your card |
+| `dashboard/status.js` | how the last update went (time, error message, card names) |
 
 Before pushing a fork, check `git status` and
 `git log --all --name-only --format= | grep -v '^examples/' | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.

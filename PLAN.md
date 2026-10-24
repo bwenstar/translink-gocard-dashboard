@@ -34,9 +34,10 @@ scripts/
 dashboard/
   index.html, app.js, style.css   # static dashboard, open index.html directly
   data.js                 # generated, personal (gitignored)
+  status.js               # last update's outcome, written by update.py (gitignored)
 ```
 
-Personal data (`.env`, `data/history.csv`, `data/raw/`, `data/stops.json`, `dashboard/data.js`) is
+Personal data (`.env`, `data/`, `dashboard/data.js`, `dashboard/status.js`) is
 gitignored so the repo can be published. Before any push, check
 `git status` / `git log --stat` to confirm none of these were ever committed.
 
@@ -136,7 +137,7 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
 - [x] Every run checks the login form before sending credentials and the CSV header of every download
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
-- [x] `tests/` (87 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
+- [x] `tests/` (128 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
       fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
       full build), history, make_example; GitHub Actions on push (Python 3.10 + 3.14; 3.9 is no longer offered on the Ubuntu 26.04 runners). Each safety rule was verified by
       breaking it on purpose (the test must fail).
@@ -204,9 +205,10 @@ and the catch. Tick them off, or move them into a phase, as they land.
       up-to-date copy of `data/`, and SD cards fail. A weekly encrypted archive (`tar` + `age` or
       `gpg`) copied to another machine or USB stick, or `rsync` pulled from the desktop whenever
       it's on. Never to a public or cloud location, per the privacy rule.
-- [ ] **Show update health on the dashboard.** Put `data/last-update.json` into `data.js` and
-      show "updated 3 days ago" in the header, or a warning when the last run failed. The Pi
-      can't pop up notifications, so right now a failure is only visible in `data/update.log`.
+- [x] **Show update health on the dashboard.** `update.py` writes `dashboard/status.js` (gitignored)
+      on every run, not via `data.js`, because a failed fetch doesn't rebuild. The header says
+      "updated N days ago"; a red banner shows the last failure's message, or "no update for N
+      days" after 10 days. Hidden in the demo and when there's no status file yet.
 - [ ] **Phone alerts from the Pi.** `update.py --notify-cmd` already exists: wire it to ntfy (a
       private random topic) or email in the cron line. Messages say what failed, never trip data.
 - [ ] **Run `--check-site` monthly from cron** with the same alert, so a change to Translink's site

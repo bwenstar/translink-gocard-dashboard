@@ -6,7 +6,9 @@
      if you have exports there, otherwise it downloads the whole history (--all).
   3. rebuild the dashboard (build.py)
 
-Every run appends to data/update.log and writes data/last-update.json. On failure it
+Every run appends to data/update.log and writes data/last-update.json, plus a copy for
+the dashboard header (dashboard/status.js), so a failed run shows there even though the
+dashboard wasn't rebuilt. On failure it
 exits non-zero and sends a desktop notification (notify-send on Linux, osascript on
 macOS), plus --notify-cmd if you give one, e.g. to get a phone alert:
 
@@ -120,6 +122,15 @@ def fetch_args(card, env):
     return [SCRIPTS / "fetch_history.py", *common, "--all"], "downloading the whole history (first run)"
 
 
+def write_dashboard_status(path, result):
+    """The last run's outcome for the dashboard header. Messages and card labels only, no trips."""
+    keep = ("started", "finished", "ok", "step", "kind", "message", "new_rows")
+    status = {k: result.get(k) for k in keep}
+    status["cards"] = [{k: c.get(k) for k in ("card", "label", "ok", "kind")} for c in result.get("cards", [])]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("window.UPDATE_STATUS = " + json.dumps(status, ensure_ascii=False) + ";\n")
+
+
 def main(argv=None):
     try:
         return _main(argv)
@@ -143,6 +154,8 @@ def _main(argv=None):
     ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env")
     ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip")
     ap.add_argument("--state", type=pathlib.Path, default=ROOT / "data", help="where the log and status files go")
+    ap.add_argument("--status-js", type=pathlib.Path, default=ROOT / "dashboard" / "status.js",
+                    help="the last run's outcome for the dashboard header (default: dashboard/status.js)")
     args = ap.parse_args(argv)
 
     state = args.state
@@ -167,6 +180,7 @@ def _main(argv=None):
         def finish(code):
             result["finished"] = dt.datetime.now().isoformat(timespec="seconds")
             status_file.write_text(json.dumps(result, indent=2) + "\n")
+            write_dashboard_status(args.status_js, result)
             log.write(f"=== {'ok' if result['ok'] else 'FAILED'}: {result['message']}\n")
             return code
 

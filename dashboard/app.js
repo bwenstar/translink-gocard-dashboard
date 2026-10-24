@@ -995,6 +995,21 @@
     writeHash();
   }
 
+  // The last `make update` run (dashboard/status.js), so a failed or missed run is visible here
+  // even though it didn't rebuild the dashboard.
+  function showUpdateStatus(S) {
+    if (!S || D.demo) return;
+    const when = parse(S.finished || S.started);
+    const days = Math.round((parse(ymd(new Date())) - parse(ymd(when))) / 86400000); // calendar days
+    const ago = days < 1 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+    const STALE_DAYS = 10; // weekly runs, plus slack for a machine that was off
+    let text;
+    if (!S.ok) text = [el("strong", { text: `The last update failed (${ago}, ${fmtDate(when)} ${hm(when)}).` }), " ", S.message || "See data/update.log."];
+    else if (days > STALE_DAYS) text = [el("strong", { text: `No update for ${days} days.` }), " Is the weekly timer or cron job still running? See data/update.log."];
+    if (text) $(".page-head").after(el("aside", { class: "status-banner", role: "status" }, ...text));
+    else $("#subtitle").textContent += ` · updated ${ago}`;
+  }
+
   if (D.demo) {
     const link = el("a", { href: D.repo ? `https://github.com/${D.repo}` : "https://github.com/", text: "see the project on GitHub" });
     $(".page-head").after(el("aside", { class: "demo-banner" },
@@ -1004,6 +1019,7 @@
   const unverified = Object.values(stops).filter((s) => s.auto).length;
   $("#subtitle").textContent = (MULTI ? `${CARDS.length} cards · ` : "") + `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
     (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify (make review-stops)` : "");
+  showUpdateStatus(window.UPDATE_STATUS);
   readHash();
   setupFilters();
   initMap();

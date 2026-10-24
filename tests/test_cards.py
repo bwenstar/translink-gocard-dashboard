@@ -71,7 +71,8 @@ class UpdateLoop(unittest.TestCase):
 
     def run_update(self, steps):
         argv = ["--history", str(self.dir / "history.csv"), "--raw", str(self.dir / "raw"), "--env", str(self.env),
-                "--gtfs-zip", str(self.dir / "SEQ_GTFS.zip"), "--state", str(self.dir)]
+                "--gtfs-zip", str(self.dir / "SEQ_GTFS.zip"), "--state", str(self.dir),
+                "--status-js", str(self.dir / "status.js")]
         with mock.patch.object(update, "run_step", steps), contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             code = update.main(argv)

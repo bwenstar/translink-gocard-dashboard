@@ -62,7 +62,7 @@ def main():
     browser = chrome()
     with tempfile.TemporaryDirectory() as tmp:
         site = pathlib.Path(tmp) / "dashboard"
-        shutil.copytree(ROOT / "dashboard", site, ignore=shutil.ignore_patterns("data.js"))
+        shutil.copytree(ROOT / "dashboard", site, ignore=shutil.ignore_patterns("data.js", "status.js"))
         subprocess.run([sys.executable, ROOT / "scripts" / "build.py", "--demo", "--out", site / "data.js"],
                        check=True, capture_output=True)
 

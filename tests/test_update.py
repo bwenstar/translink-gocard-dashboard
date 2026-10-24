@@ -46,11 +46,13 @@ class Update(unittest.TestCase):
 
     def run_update(self, steps, *extra):
         argv = ["--history", str(self.history), "--raw", str(self.raw), "--env", str(self.env),
-                "--gtfs-zip", str(self.gtfs), "--state", str(self.dir), *extra]
+                "--gtfs-zip", str(self.gtfs), "--state", str(self.dir), "--status-js", str(self.dir / "status.js"), *extra]
         out, err = io.StringIO(), io.StringIO()
         with mock.patch.object(update, "run_step", steps), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = update.main(argv)
         self.status = json.loads((self.dir / "last-update.json").read_text())
+        js = (self.dir / "status.js").read_text()
+        self.dashboard_status = json.loads(js.removeprefix("window.UPDATE_STATUS = ").removesuffix(";\n"))
         return code, out.getvalue() + err.getvalue()
 
     def test_normal_run(self):
@@ -62,6 +64,14 @@ class Update(unittest.TestCase):
         self.assertEqual((self.status["ok"], self.status["new_rows"]), (True, 3))
         self.assertEqual(self.notes, [])                          # silent on success by default
         self.assertIn("=== ok", (self.dir / "update.log").read_text())
+
+    def test_dashboard_gets_the_outcome_even_when_not_rebuilt(self):
+        self.run_update(FakeSteps(fetch=(0, "Downloaded 1 rows: 1 new, 0 updated.\n", "")))
+        self.assertEqual((self.dashboard_status["ok"], self.dashboard_status["new_rows"]), (True, 1))
+        self.run_update(FakeSteps(fetch=(1, "", "Couldn't reach go card online\n")))
+        self.assertEqual((self.dashboard_status["ok"], self.dashboard_status["kind"]), (False, "network"))
+        self.assertIn("next run will try again", self.dashboard_status["message"])
+        self.assertEqual(set(self.dashboard_status["cards"][0]), {"card", "label", "ok", "kind"})
 
     def test_stale_or_missing_timetable_is_refreshed(self):
         old = time.time() - 40 * 86400
