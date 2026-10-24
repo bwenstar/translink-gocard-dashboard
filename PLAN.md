@@ -115,8 +115,12 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
       never replaced by an open one. `--import PATH` merges hand-made exports with no login.
 - [x] Any-length ranges: `--years N` or `--from/--to` are split into 180-day windows
       (`--years 6` tested)
-- [ ] Multiple cards, if the account has more than one (one card per login on this site, so
-      probably several `.env` profiles)
+- [x] Multiple cards: `USERNAME_2`/`PASSWORD_2`/`CARD_NAME_2` and so on (`scripts/cards.py`),
+      `fetch_history.py --card N`, a file per card (card 1's paths unchanged). update.py logs in to
+      each card with its own login pause, and build.py tags legs and top-ups and groups journeys per
+      card. Dashboard: card filter, Card column, one balance line per card.
+      `.gitignore` now ignores all of `data/` except the example, because the per-card files were
+      initially NOT ignored.
 
 ### Credentials & publishing hygiene
 - [x] Credentials only go to gocard.translink.com.au over HTTPS (host checked after login), never

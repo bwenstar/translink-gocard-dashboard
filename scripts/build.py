@@ -17,6 +17,7 @@ import pathlib
 import re
 import sys
 
+import cards
 from history import Master
 import routes
 
@@ -166,7 +167,7 @@ CHECK_FIELDS = ("schedDep", "schedMins", "vsTimetable")
 def keep_timetable_checks(legs, path):
     """Ride-vs-timetable results only exist while that ride's timetable is current, so keep
     them: save new ones to `path` and give earlier ones back to their legs."""
-    key = lambda l: f'{l["on"]}|{l["from"]}|{l["to"]}'
+    key = lambda l: f'{l["on"]}|{l["from"]}|{l["to"]}' + (f'|card{l["card"]}' if l.get("card", 1) != 1 else "")
     try:
         saved = json.loads(path.read_text())
     except (OSError, ValueError):
@@ -233,8 +234,11 @@ def parse_legs(raw):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
-                    help="master travel history from fetch_history.py (default: data/history.csv)")
+    ap.add_argument("--history", type=pathlib.Path, action="append",
+                    help="a card's travel history (repeat for several cards; default: every card's history "
+                         "in data/, i.e. history.csv and history.cardN.csv)")
+    ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env",
+                    help="read card labels (CARD_NAME, CARD_NAME_2, ...) from here; no credentials are used")
     ap.add_argument("--stops", type=pathlib.Path, default=ROOT / "data" / "stops.json",
                     help="go card stop name -> GTFS stop_id map, created if missing (default: data/stops.json)")
     ap.add_argument("--gtfs", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "stops.txt",
@@ -248,19 +252,43 @@ def main():
     ap.add_argument("--out", type=pathlib.Path, default=ROOT / "dashboard" / "data.js",
                     help="generated dashboard data file (default: dashboard/data.js)")
     args = ap.parse_args()
+    env = cards.read_env(args.env)
     if args.demo:
-        args.history, args.stops = ROOT / "examples" / "history.csv", ROOT / "examples" / "stops.json"
+        args.history, args.stops = [ROOT / "examples" / "history.csv"], ROOT / "examples" / "stops.json"
+        env = {}
+    if args.history:  # explicit files: card number from the name (history.cardN.csv), else in order
+        tracked, used = [], set()
+        for i, path in enumerate(args.history, 1):
+            m = re.search(r"\.card(\d+)\.csv$", path.name)
+            n = int(m.group(1)) if m else (1 if 1 not in used else max(used) + 1)
+            used.add(n)
+            tracked.append(cards.Card(n, cards.label(n, env), path, path.parent))
+    else:
+        tracked = cards.present(env, ROOT / "data") or [cards.Card(1, cards.label(1, env), *cards.paths(1, ROOT / "data"))]
 
-    master = Master(args.history)
-    raw = list(master.rows.values())
+    per_card = [(c, list(Master(c.history).rows.values())) for c in tracked]
+    raw = [r for _, rows in per_card for r in rows]
     if not raw:
-        sys.exit(f"No rows in {args.history} - run scripts/fetch_history.py "
+        sys.exit(f"No rows in {', '.join(str(c.history) for c in tracked)} - run scripts/fetch_history.py "
                  f"(or fetch_history.py --import data/raw to use exports you already have)")
     gtfs = load_gtfs(args.gtfs)
     stop_map = json.loads(args.stops.read_text()) if args.stops.exists() else {}
 
-    legs, topups = parse_legs(raw)
-    jid = legs[-1]["journey"] if legs else -1
+    # Parse each card on its own: a transfer continues the same card's previous leg.
+    legs, topups, journeys = [], [], 0
+    for card, rows in per_card:
+        card_legs, card_topups = parse_legs(rows)
+        for l in card_legs:
+            l["journey"] += journeys
+            l["card"] = card.n
+        for t in card_topups:
+            t["card"] = card.n
+        journeys += len({l["journey"] for l in card_legs})
+        legs += card_legs
+        topups += card_topups
+    legs.sort(key=lambda l: l["on"])
+    topups.sort(key=lambda t: t["t"])
+    jid = journeys - 1
 
     # Geocode every stop name we've seen; guess any new ones.
     names = {l["from"] for l in legs if l["from"]} | {l["to"] for l in legs if l["to"]}
@@ -326,12 +354,13 @@ def main():
     payload = {
         "generated": dt.datetime.now().isoformat(timespec="seconds"),
         "demo": args.demo, "repo": os.environ.get("GITHUB_REPOSITORY"),  # repo: set by GitHub Actions
-        "history": args.history.name, "rows": len(raw), "stops": stops, "paths": paths, "network": net, "timetable": feed, "legs": legs, "topups": topups,
+        "history": ", ".join(c.history.name for c in tracked), "rows": len(raw),
+        "cards": [{"n": c.n, "label": c.label} for c in tracked], "stops": stops, "paths": paths, "network": net, "timetable": feed, "legs": legs, "topups": topups,
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text("window.TRAVEL = " + json.dumps(payload, ensure_ascii=False) + ";\n")
     print(f"{len(legs)} legs in {jid + 1} journeys, {len(topups)} top-ups, {len(stops)} stops "
-          f"from {len(raw)} rows in {args.history.name} -> {args.out}")
+          f"from {len(raw)} rows in {', '.join(c.history.name for c in tracked)} -> {args.out}")
 
 
 if __name__ == "__main__":

@@ -40,6 +40,8 @@ from urllib.parse import urlparse
 
 import requests
 
+import cards
+from cards import read_env  # noqa: F401  (re-exported: serve.py imports it from here)
 from history import Master, parse_rows, read_export
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -57,38 +59,30 @@ EXAMPLE_CARD = "0123456789012345"  # the placeholder in .env.example
 UA = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
 
 
-def read_env(path):
-    vals = {}
-    if path.exists():
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                vals[k.strip().removeprefix("export ").strip()] = v.strip().strip("'\"")
-    return vals
-
-
 def warn_if_readable(path):
     """.env holds a password: warn if other users on this machine can read it."""
     if os.name == "posix" and path.exists() and path.stat().st_mode & 0o077:
         print(f"Warning: {path} is readable by other users. Fix with: chmod 600 {path}", file=sys.stderr)
 
 
-def credentials(env_path, ask=False):
+def credentials(env_path, ask=False, n=1):
+    """(card number, password) for card n (see cards.py): USERNAME/PASSWORD, or USERNAME_2/... ."""
     warn_if_readable(env_path)
     env = read_env(env_path)
-    card = os.environ.get("GOCARD_CARD") or env.get("GOCARD_CARD") or env.get("USERNAME")
-    pw = None if ask else os.environ.get("GOCARD_PASSWORD") or env.get("GOCARD_PASSWORD") or env.get("PASSWORD")
+    sfx = cards.suffix(n)
+    card = os.environ.get(f"GOCARD_CARD{sfx}") or env.get(f"GOCARD_CARD{sfx}") or env.get(f"USERNAME{sfx}")
+    pw = None if ask else (os.environ.get(f"GOCARD_PASSWORD{sfx}") or env.get(f"GOCARD_PASSWORD{sfx}")
+                           or env.get(f"PASSWORD{sfx}"))
     if not card:
-        sys.exit(f"No go card number: set USERNAME in {env_path} (copy .env.example) or GOCARD_CARD")
+        sys.exit(f"No go card number: set USERNAME{sfx} in {env_path} (copy .env.example) or GOCARD_CARD{sfx}")
     card = card.replace(" ", "")
     if card == EXAMPLE_CARD:
         sys.exit(f"{env_path} still has the example card number - fill in your own")
     if not (card.isdigit() and len(card) == 16):
-        sys.exit("The go card number (USERNAME) should be 16 digits")
+        sys.exit(f"The go card number (USERNAME{sfx}) should be 16 digits")
     if not pw:
         if not sys.stdin.isatty():
-            sys.exit("No password: set PASSWORD in .env or GOCARD_PASSWORD, or run interactively to be asked")
+            sys.exit(f"No password: set PASSWORD{sfx} in .env or GOCARD_PASSWORD{sfx}, or run interactively to be asked")
         pw = getpass.getpass(f"go card online password for card ...{card[-4:]}: ")
     return card, pw
 
@@ -229,7 +223,7 @@ def check_site(args):
     def snapshot(name, text):
         (folder / name).write_text(text, encoding="utf-8")
 
-    card, pw = credentials(args.env, args.ask)
+    card, pw = credentials(args.env, args.ask, args.card)
     print(f"Checking {BASE} against docs/site-contract.json (captured {CONTRACT['captured']})")
     s = login(card, pw, snapshot)  # exits with the differences if the login form changed
     print("  login form and login: OK")
@@ -296,14 +290,19 @@ def run():
     mode.add_argument("--import", dest="imports", type=pathlib.Path, nargs="+", metavar="PATH",
                       help="merge local CSV exports (files or folders) into the master, no download")
     ap.add_argument("--to", dest="end", type=parse_date, help="end of the range (default: today)")
-    ap.add_argument("--history", type=pathlib.Path, default=ROOT / "data" / "history.csv",
-                    help="master history file (default: data/history.csv)")
-    ap.add_argument("--raw", type=pathlib.Path, default=ROOT / "data" / "raw",
-                    help="where to keep a copy of each download (default: data/raw)")
+    ap.add_argument("--card", type=int, default=1,
+                    help="which card (see scripts/cards.py): 1 = USERNAME/PASSWORD, 2 = USERNAME_2/PASSWORD_2, ...")
+    ap.add_argument("--history", type=pathlib.Path,
+                    help="master history file (default: data/history.csv, or data/history.cardN.csv)")
+    ap.add_argument("--raw", type=pathlib.Path,
+                    help="where to keep a copy of each download (default: data/raw, or data/raw-cardN)")
     ap.add_argument("--no-raw", action="store_true", help="don't keep per-window copies")
     ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env", help="credentials file")
     ap.add_argument("--ask", action="store_true", help="prompt for the password instead of reading it")
     args = ap.parse_args()
+    default_history, default_raw = cards.paths(args.card, ROOT / "data")
+    args.history = args.history or default_history
+    args.raw = args.raw or default_raw
 
     if args.check_site:
         return check_site(args)
@@ -331,7 +330,7 @@ def run():
     if start and start > end:
         sys.exit("--from is after --to")
 
-    card, pw = credentials(args.env, args.ask)
+    card, pw = credentials(args.env, args.ask, args.card)
     s = login(card, pw)
     print(f"Logged in as card ...{card[-4:]}")
     total = added = updated = empty_run = 0

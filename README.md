@@ -138,6 +138,23 @@ only read from `.env`, never from the environment, where it's usually your OS lo
 **Rather not store your password?** Leave `PASSWORD` out of `.env`, or run with `--ask`.
 `fetch_history.py` will prompt for it each run, and it's held in memory only for that run.
 
+**More than one go card** (yours and a partner's, say)? Add each extra card with a number, and
+optionally a label for the dashboard:
+
+```ini
+USERNAME_2=0123456789012345
+PASSWORD_2=its-go-card-online-password
+CARD_NAME_2=Partner
+CARD_NAME=Me        # optional label for card 1
+```
+
+`make update` then logs in to each card in turn, a few seconds apart, and keeps each card's
+history in its own file: card 1 in `data/history.csv`, card *N* in `data/history.cardN.csv`, with
+raw copies in `data/raw-cardN/`. Each card has its own login pause, so a wrong password on one
+card doesn't stop the others updating. The dashboard gets card filter buttons, a Card column,
+and one balance line per card. Journeys and transfers are worked out per card. To download a
+single card by hand: `fetch_history.py --card 2`.
+
 ## Usage
 
 ### Download history: `scripts/fetch_history.py`
@@ -159,6 +176,7 @@ Options:
 | `--raw` | `data/raw` | where a backup copy of each download is saved, as `<YYMMDD>-<YYMMDD>/Travel_history.csv` |
 | `--no-raw` | | don't keep backup copies |
 | `--env` | `.env` | credentials file |
+| `--card` | `1` | which card to download (`2` uses `USERNAME_2`/`PASSWORD_2`, and so on) |
 | `--ask` | | prompt for the password instead of reading it from `.env` |
 
 Each window is merged and saved as soon as it's downloaded, so an interrupted run keeps what it got.
@@ -355,9 +373,9 @@ tests/                      unit tests (python3 -m unittest discover tests); no 
   make_example.py           regenerates examples/ from the timetable (fictional commuter, seeded)
 examples/
   history.csv, stops.json   fictional example data for --demo and the screenshots
-data/
-  history.csv               master travel history (gitignored)
-  raw/                      backup copy of every download (gitignored)
+data/                       everything here is gitignored except stops.example.json
+  history.csv               master travel history (history.cardN.csv for card N)
+  raw/                      backup copy of every download (raw-cardN/ for card N)
   stops.json                your stop name -> GTFS stop_id map (gitignored)
   stops.example.json        format example
   gtfs/                     GTFS feed and route-path cache (gitignored)
@@ -470,7 +488,8 @@ any web map. `build.py`, `history.py` and `routes.py` make no network requests.
 
 ### Personal files
 
-These files are personal and are gitignored. Don't commit them:
+Everything in `data/` is gitignored except `data/stops.example.json`, so new personal files
+there are private by default. These are the personal files, and none of them should be committed:
 
 | File | Contains |
 |---|---|
@@ -506,6 +525,7 @@ them on every push (Python 3.10 and 3.14).
 | `test_build.py` | Times, stop-name tokens, stop matching from scratch (picks the right one of two same-named streets), stop modes, and a full build on the fake feed |
 | `test_parsing.py`, `test_history.py` | Every CSV row type, money formats, merging and de-duplicating downloads, master file ordering |
 | `test_make_example.py` | The example generator: real-looking CSV, consistent balances, same output for the same seed |
+| `test_cards.py` | Several go cards: `.env` numbering and labels, card 2 logging in with its own credentials into its own files, `make update` fetching each card then building once, one card's failed login pausing only that card, and journeys never chaining across cards |
 | `test_review_stops.py` | Stop review: guesses are confirmed (including a station whose platforms were used), corrected only with 2+ agreeing rides, mixed or missing evidence is left for you, and a dry run changes nothing |
 | `test_serve.py` | The dashboard server: the right user and password are needed, it won't serve on the network without a password, never lists directories, and can't be tricked into serving files outside `dashboard/` |
 | `test_update.py` | `make update`: step order, first runs, the timetable refresh. A failed login pauses later runs until `.env` changes. Failure kinds match fetch_history's real messages, crashes are still notified, only one run at a time, the notify command and the timer units. |
@@ -550,7 +570,8 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 - Works for anyone with a go card online account in South East Queensland: nothing in the code is
   specific to one person. Stops are matched from scratch for each user (check the guesses the
   build prints).
-- One card per login. The site shows one card per session, so multiple cards aren't supported yet.
+- One go card per login: go card online shows a single card per session, so several cards mean
+  several logins (handled for you; see [`.env`](#env)).
 - History only goes back as far as go card online keeps it for that card. A replacement card starts
   a new history.
 - Trips you started by topping up with the driver have no recorded boarding stop. They show as

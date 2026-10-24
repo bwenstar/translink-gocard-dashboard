@@ -1,24 +1,16 @@
 # secrets
 .env
+.env.*
+!.env.example
 
-# personal travel data - keep out of git unless you choose otherwise
-data/raw/
+# Personal data. EVERYTHING in data/ is private except the committed format example:
+# travel histories (one per card), raw exports, your stop list, update logs and state,
+# site snapshots, timetable checks, the GTFS cache. New files there are private by default.
+data/*
+!data/stops.example.json
+
+# generated from your data
 dashboard/data.js
-
-# downloaded GTFS cache (re-fetch with scripts/fetch_gtfs.py)
-data/gtfs/
 
 __pycache__/
 .venv/
-data/stops.json
-data/stops.json.bak
-data/history.csv
-# private raw pages from fetch_history.py --check-site
-data/site-snapshots/
-# update.py state (log, status, lock, paused-after-failed-login marker)
-data/update.log
-data/cron.log
-data/last-update.json
-data/.update.lock
-data/.login-failed
-data/timetable-checks.json

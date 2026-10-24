@@ -95,7 +95,7 @@ button:hover { background: var(--wash); }
 button.on { border-color: var(--s1); box-shadow: inset 0 0 0 1px var(--s1); font-weight: 600; }
 button.ghost { border-color: transparent; background: none; color: var(--ink-2); }
 .filter-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
-.presets, .days, .modes { display: flex; gap: 4px; flex-wrap: wrap; }
+.presets, .days, .modes, .cards { display: flex; gap: 4px; flex-wrap: wrap; }
 .search input { width: 150px; }
 .active { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 24px; font-size: 12px; }
 .chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--wash); }
@@ -145,6 +145,9 @@ select { max-width: 240px; }
 .chart .hover .mark, .chart g.hover > .mark { opacity: .75; }
 .chart .label { fill: var(--ink-2); }
 .chart .dim .mark { opacity: .35; }
+.series-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--ink-2); margin: -4px 0 8px; }
+.series-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.series-legend .key { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .sub-h { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
 @media (max-width: 800px) { .pair { grid-template-columns: 1fr; } }

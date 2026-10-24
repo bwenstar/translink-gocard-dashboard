@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import threading
 import unittest
+import unittest.mock
 import urllib.error
 import urllib.request
 
@@ -20,6 +21,9 @@ class Server(unittest.TestCase):
         (site / "data.js").write_text("window.TRAVEL = {};")
         (self.root / ".env").write_text("PASSWORD=go-card-secret\n")  # outside the served folder
         self.server = serve.make_server("127.0.0.1", 0, site, **kw)
+        quiet = unittest.mock.patch.object(serve.Handler, "log_message", lambda *a: None)
+        quiet.start()
+        self.addCleanup(quiet.stop)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)

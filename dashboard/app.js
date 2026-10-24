@@ -62,8 +62,14 @@
   const fmtKm = (v) => (v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1));
 
   // ---------- data ----------
-  const legs = D.legs.map((l, i) => ({ ...l, i, onD: parse(l.on), offD: l.off ? parse(l.off) : null, mode: l.mode || "bus" }));
-  const topups = D.topups.map((t) => ({ ...t, d: parse(t.t) }));
+  const legs = D.legs.map((l, i) => ({ ...l, i, onD: parse(l.on), offD: l.off ? parse(l.off) : null, mode: l.mode || "bus", card: l.card || 1 }));
+  const topups = D.topups.map((t) => ({ ...t, d: parse(t.t), card: t.card || 1 }));
+  // several go cards (see scripts/cards.py): filters, a balance line each, and a Card column
+  const CARDS = D.cards && D.cards.length ? D.cards : [{ n: 1, label: "Card 1" }];
+  const MULTI = CARDS.length > 1;
+  const cardLabel = (n) => (CARDS.find((c) => c.n === n) || { label: `Card ${n}` }).label;
+  const CARD_COLORS = ["--s1", "--s2", "--m-ferry"];  // the three hues validated against each other
+  const cardColor = (n) => { const i = CARDS.findIndex((c) => c.n === n); return i >= 0 && i < CARD_COLORS.length ? css(CARD_COLORS[i]) : css("--ink-2"); };
   const stops = D.stops;
   const minDate = legs.length ? ymd(legs[0].onD) : "";
   const maxDate = legs.length ? ymd(legs[legs.length - 1].onD) : "";
@@ -80,7 +86,7 @@
 
   // ---------- state & filters ----------
   const fresh = () => ({
-    from: minDate, to: maxDate, days: new Set([0, 1, 2, 3, 4, 5, 6]), modes: new Set(MODES),
+    from: minDate, to: maxDate, days: new Set([0, 1, 2, 3, 4, 5, 6]), modes: new Set(MODES), cards: new Set(CARDS.map((c) => c.n)),
     route: "", hours: "", kind: "", stop: "", pair: "", q: "", dur: "",
   });
   const state = { ...fresh(), selJourney: null, sort: { k: "on", asc: false } };
@@ -96,6 +102,7 @@
       if (!state.days.has(weekday(l.onD))) return false;
       if (ignore !== "modes" && !state.modes.has(l.mode)) return false;
       if (state.route && routeKey(l) !== state.route) return false;
+      if (MULTI && !state.cards.has(l.card)) return false;
       if (state.hours && (l.timeUnknown || l.onD.getHours() < h0 || l.onD.getHours() >= h1)) return false;
       if (state.stop && l.from !== state.stop && l.to !== state.stop) return false;
       if (state.pair && (!l.from || !l.to || pairKey(l.from, l.to) !== state.pair)) return false;
@@ -129,6 +136,20 @@
       };
       $(".modes").append(b);
     });
+    if (MULTI) {
+      $(".cards").hidden = false;
+      CARDS.forEach((c) => {
+        const n = legs.filter((l) => l.card === c.n).length;
+        const b = el("button", { class: "mode", "data-card": c.n }, el("i", { class: "swatch", style: `background:${cardColor(c.n)}` }), `${c.label} `, el("span", { class: "count", text: n }));
+        b.onclick = (e) => {
+          if (e.altKey || e.metaKey || e.ctrlKey) state.cards = new Set([c.n]);
+          else state.cards.has(c.n) ? state.cards.delete(c.n) : state.cards.add(c.n);
+          render({ fit: true });
+        };
+        $(".cards").append(b);
+      });
+      $("th.card-col").hidden = false;
+    }
     // routes grouped by mode, busiest first
     MODES.forEach((m) => {
       const list = [...routeInfo.entries()].filter(([, r]) => r.mode === m).sort((a, b) => b[1].n - a[1].n);
@@ -164,6 +185,10 @@
     $("#from").value = state.from; $("#to").value = state.to;
     document.querySelectorAll("[data-day]").forEach((b) => {
       const on = state.days.has(Number(b.dataset.day));
+      b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+    });
+    document.querySelectorAll("[data-card]").forEach((b) => {
+      const on = state.cards.has(Number(b.dataset.card));
       b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
     });
     document.querySelectorAll("[data-mode]").forEach((b) => {
@@ -209,6 +234,7 @@
     if (state.from !== f.from || state.to !== f.to) chip(state.from === state.to ? fmtDate(parse(state.from)) : `${state.from} → ${state.to}`, () => { state.from = f.from; state.to = f.to; });
     if (state.days.size < 7) chip(`Days: ${[...state.days].sort().map((d) => DAYS[d]).join(", ") || "none"}`, () => (state.days = f.days));
     if (state.modes.size < MODES.length) chip(`Mode: ${MODES.filter((m) => state.modes.has(m)).map((m) => MODE_LABEL[m]).join(", ") || "none"}`, () => (state.modes = f.modes));
+    if (MULTI && state.cards.size < CARDS.length) chip(`Card: ${CARDS.filter((c) => state.cards.has(c.n)).map((c) => c.label).join(", ") || "none"}`, () => (state.cards = f.cards));
     if (state.route) chip(`Route ${routeInfo.get(state.route)?.label || state.route}`, () => (state.route = ""));
     if (state.hours) chip(`Time ${$("#hours").selectedOptions[0]?.textContent || state.hours}`, () => (state.hours = ""));
     if (state.kind) chip($("#kind").selectedOptions[0]?.textContent || state.kind, () => (state.kind = ""));
@@ -228,6 +254,7 @@
     if (state.to !== f.to) p.set("to", state.to);
     if (state.days.size < 7) p.set("days", [...state.days].sort().join(""));
     if (state.modes.size < MODES.length) p.set("modes", [...state.modes].join(","));
+    if (MULTI && state.cards.size < CARDS.length) p.set("cards", [...state.cards].join(","));
     for (const k of ["route", "hours", "kind", "stop", "pair", "q", "dur"]) if (state[k]) p.set(k, state[k]);
     const h = p.toString();
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
@@ -237,6 +264,7 @@
     if (p.has("from")) state.from = p.get("from");
     if (p.has("to")) state.to = p.get("to");
     if (p.has("days")) state.days = new Set([...p.get("days")].map(Number));
+    if (p.has("cards")) state.cards = new Set(p.get("cards").split(",").map(Number).filter((n) => CARDS.some((c) => c.n === n)));
     if (p.has("modes")) state.modes = new Set(p.get("modes").split(",").filter((m) => MODES.includes(m)));
     for (const k of ["route", "hours", "kind", "stop", "pair", "q", "dur"]) if (p.has(k)) state[k] = p.get(k);
   }
@@ -298,7 +326,7 @@
     const failed = rows.filter((l) => l.failedTouchOff);
     const transfers = rows.filter((l) => l.transfer).length;
     const spanDays = rows.length ? Math.round((parse(state.to) - parse(state.from)) / 864e5) + 1 : 0;
-    const tops = topups.filter((t) => t.kind !== "adjustment" && ymd(t.d) >= state.from && ymd(t.d) <= state.to);
+    const tops = topups.filter((t) => t.kind !== "adjustment" && ymd(t.d) >= state.from && ymd(t.d) <= state.to && (!MULTI || state.cards.has(t.card)));
     const kmTotal = rows.reduce((s, l) => s + (l.km || 0), 0);
     const approx = rows.filter((l) => l.kmApprox).length;
     const routeCounts = {};
@@ -817,9 +845,14 @@
     const box = $("#balance");
     box.replaceChildren();
     const pts = [
-      ...legs.map((l) => ({ d: l.onD, v: l.balance, kind: "trip", l })),
-      ...topups.map((t) => ({ d: t.d, v: t.balance, kind: "topup", t })),
-    ].filter((p) => p.v != null && ymd(p.d) >= state.from && ymd(p.d) <= state.to).sort((a, b) => a.d - b.d);
+      ...legs.map((l) => ({ d: l.onD, v: l.balance, kind: "trip", l, card: l.card })),
+      ...topups.map((t) => ({ d: t.d, v: t.balance, kind: "topup", t, card: t.card })),
+    ].filter((p) => p.v != null && ymd(p.d) >= state.from && ymd(p.d) <= state.to && (!MULTI || state.cards.has(p.card)))
+      .sort((a, b) => a.d - b.d);
+    const shown = CARDS.filter((c) => pts.some((p) => p.card === c.n));
+    const legendBox = $("#balanceLegend");
+    legendBox.hidden = !MULTI;
+    if (MULTI) legendBox.replaceChildren(...shown.map((c) => el("span", {}, el("i", { class: "key", style: `background:${cardColor(c.n)}` }), c.label)));
     if (pts.length < 2) return empty(box);
     const W = box.clientWidth, H = 200, left = 40, bottom = 22, top = 10, right = 8;
     const t0 = +pts[0].d, t1 = +pts[pts.length - 1].d;
@@ -837,12 +870,16 @@
     for (let d = new Date(pts[0].d.getFullYear(), pts[0].d.getMonth() + 1, 1), i = 0; d <= pts[pts.length - 1].d; d.setMonth(d.getMonth() + 1), i++)
       if (i % every === 0)
         svg("text", { x: x(+d), y: H - 6, "text-anchor": "middle", text: d.getMonth() === 0 || months > 12 && every > 1 ? `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` : MONTHS[d.getMonth()] }, s);
-    // step line: balance holds until the next event
-    let dPath = `M${x(+pts[0].d)},${y(pts[0].v)}`;
-    for (let i = 1; i < pts.length; i++) dPath += `H${x(+pts[i].d)}V${y(pts[i].v)}`;
-    const s1 = css("--s1"), surface = css("--surface");
-    svg("path", { d: dPath, fill: "none", stroke: s1, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, s);
-    pts.filter((p) => p.kind === "topup").forEach((p) => svg("circle", { cx: x(+p.d), cy: y(p.v), r: 5, fill: s1, stroke: surface, "stroke-width": 2 }, s));
+    // step line per card: the balance holds until the next event
+    const surface = css("--surface"), s1 = css("--s1");
+    shown.forEach((c) => {
+      const cp = pts.filter((p) => p.card === c.n), color = cardColor(c.n);
+      if (!cp.length) return;
+      let dPath = `M${x(+cp[0].d)},${y(cp[0].v)}`;
+      for (let i = 1; i < cp.length; i++) dPath += `H${x(+cp[i].d)}V${y(cp[i].v)}`;
+      svg("path", { d: dPath, fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, s);
+      cp.filter((p) => p.kind === "topup").forEach((p) => svg("circle", { cx: x(+p.d), cy: y(p.v), r: 5, fill: color, stroke: surface, "stroke-width": 2 }, s));
+    });
     // crosshair
     const cross = svg("line", { class: "axis-line", y1: top, y2: H - bottom, visibility: "hidden" }, s);
     const dot = svg("circle", { r: 5, fill: s1, stroke: surface, "stroke-width": 2, visibility: "hidden" }, s);
@@ -853,7 +890,8 @@
       for (const p of pts) if (Math.abs(x(+p.d) - bx) < Math.abs(x(+best.d) - bx)) best = p;
       cross.setAttribute("x1", x(+best.d)); cross.setAttribute("x2", x(+best.d)); cross.setAttribute("visibility", "visible");
       dot.setAttribute("cx", x(+best.d)); dot.setAttribute("cy", y(best.v)); dot.setAttribute("visibility", "visible");
-      showTip(e, `${fmtDate(best.d)} ${hm(best.d)}`, [[money(best.v), "balance", s1],
+      dot.setAttribute("fill", cardColor(best.card));
+      showTip(e, `${fmtDate(best.d)} ${hm(best.d)}`, [[money(best.v), MULTI ? `balance · ${cardLabel(best.card)}` : "balance", cardColor(best.card)],
         best.kind === "topup" ? [`${best.t.amount > 0 ? "+" : ""}${money(best.t.amount)}`, `${TOPUP_LABEL[best.t.kind] || "top-up"} at ${best.t.stop}`]
           : [money(best.l.fare), `${stopName(best.l.from)} → ${best.l.to || "no tap-off"}`]]);
     });
@@ -863,7 +901,7 @@
   // ---------- table ----------
   function renderTable(rows) {
     const k = state.sort.k, dir = state.sort.asc ? 1 : -1;
-    const val = (l) => (k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD)
+    const val = (l) => (k === "card" ? cardLabel(l.card) : k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD)
       : k === "route" ? routeLabel(l).padStart(6, "0") : l[k] ?? "");
     const sorted = [...rows].sort((a, b) => (val(a) > val(b) ? dir : val(a) < val(b) ? -dir : (a.i - b.i) * dir));
     document.querySelectorAll("#trips th").forEach((th) => {
@@ -878,6 +916,7 @@
       const fromCell = el("td", { class: "stop", text: stopName(l.from) });
       if (l.transfer) fromCell.append(el("span", { class: "tag", text: "transfer" }));
       if (stops[l.from]?.auto || stops[l.to]?.auto) toCell.append(el("span", { class: "tag", text: "stop unverified" }));
+      if (MULTI) tr.append(el("td", { text: cardLabel(l.card) }));
       tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }), el("td", { text: hm(l.offD) }),
         el("td", {}, el("i", { class: `swatch ${l.mode}` }), MODE_LABEL[l.mode]),
         el("td", { text: routeLabel(l), title: l.route ? `likely route ${l.route}${l.routeName ? ` (${l.routeName})` : ""}, from the current timetable` : "no timetable match" }),
@@ -901,10 +940,10 @@
   }));
 
   function downloadCsv() {
-    const cols = ["date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "timetabled_minutes", "vs_timetable", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
+    const cols = [...(MULTI ? ["card"] : []), "date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "timetabled_minutes", "vs_timetable", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
     const q = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
     const lines = [cols.join(",")].concat(filtered().map((l) => [
-      ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.schedMins, l.vsTimetable, l.km, l.kmApprox ? 1 : 0,
+      ...(MULTI ? [cardLabel(l.card)] : []), ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.schedMins, l.vsTimetable, l.km, l.kmApprox ? 1 : 0,
       l.fare.toFixed(2), l.balance, l.transfer ? 1 : 0, l.failedTouchOff ? 1 : 0, l.journey,
     ].map(q).join(",")));
     const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), download: `go-card-trips-${state.from}-to-${state.to}.csv` });
@@ -943,7 +982,7 @@
       " A made-up commuter's year of real timetabled trips: busway, train, CityCat and light rail. To build this for your own go card, ", link, "."));
   }
   const unverified = Object.values(stops).filter((s) => s.auto).length;
-  $("#subtitle").textContent = `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
+  $("#subtitle").textContent = (MULTI ? `${CARDS.length} cards · ` : "") + `${legs.length} legs from ${fmtDate(parse(minDate))} to ${fmtDate(parse(maxDate))} · ${D.rows} rows in ${D.history} · built ${D.generated.replace("T", " ")}` +
     (unverified ? ` · ${unverified} auto-matched stop${unverified === 1 ? "" : "s"} to verify (make review-stops)` : "");
   readHash();
   setupFilters();

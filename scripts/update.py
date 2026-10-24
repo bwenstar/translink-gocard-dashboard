@@ -33,6 +33,10 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+import cards  # noqa: E402
+
+BETWEEN_CARDS_S = 5  # pause between one card's session and the next login
 
 
 def run_step(name, argv, log):
@@ -106,13 +110,13 @@ def has_rows(path):
         return False
 
 
-def fetch_args(args):
-    """The fetch_history.py call for this run: incremental, or the right first-run mode."""
-    common = ["--history", args.history, "--raw", args.raw, "--env", args.env]
-    if has_rows(args.history):
+def fetch_args(card, env):
+    """The fetch_history.py call for one card: incremental, or the right first-run mode."""
+    common = ["--card", card.n, "--history", card.history, "--raw", card.raw, "--env", env]
+    if has_rows(card.history):
         return [SCRIPTS / "fetch_history.py", *common], None
-    if any(args.raw.rglob("*.csv")) if args.raw.exists() else False:
-        return [SCRIPTS / "fetch_history.py", *common, "--import", args.raw], "importing data/raw/ (first run)"
+    if any(card.raw.rglob("*.csv")) if card.raw.exists() else False:
+        return [SCRIPTS / "fetch_history.py", *common, "--import", card.raw], f"importing {card.raw.name}/ (first run)"
     return [SCRIPTS / "fetch_history.py", *common, "--all"], "downloading the whole history (first run)"
 
 
@@ -142,7 +146,8 @@ def _main(argv=None):
     args = ap.parse_args(argv)
 
     state = args.state
-    marker, status_file = state / ".login-failed", state / "last-update.json"
+    status_file = state / "last-update.json"
+    marker_for = lambda card: state / (".login-failed" if card.n == 1 else f".login-failed-card{card.n}")
     state.mkdir(parents=True, exist_ok=True)
     started = dt.datetime.now().isoformat(timespec="seconds")
     result = {"started": started, "ok": False, "step": None, "kind": None, "message": "", "new_rows": None}
@@ -175,12 +180,27 @@ def _main(argv=None):
             if code:
                 print("  Couldn't refresh the timetable; carrying on with the old one.")
 
-        # 2. go card history
-        if not args.no_fetch:
+        # 2. go card history, one card at a time (each has its own login and its own pause)
+        tracked = cards.configured(cards.read_env(args.env), args.history.parent)
+        tracked[0].history, tracked[0].raw = args.history, args.raw  # card 1: --history/--raw
+        many = len(tracked) > 1
+        name = lambda card: f"{card.label}: " if many else ""
+        failures, fetched = [], 0
+        result["cards"] = []
+        for i, card in enumerate([] if args.no_fetch else tracked):
+            if i:
+                time.sleep(BETWEEN_CARDS_S)
+            if many:
+                print(f"\n--- {card.label} ---")
+            marker = marker_for(card)
             env_changed = args.env.exists() and marker.exists() and args.env.stat().st_mtime > marker.stat().st_mtime
+            entry = {"card": card.n, "label": card.label, "ok": False, "kind": None, "new_rows": None}
+            result["cards"].append(entry)
             if marker.exists() and not (args.force or env_changed):
-                return finish(fail("fetch", "login", "Skipped: the last login failed. " + ADVICE["login"]))
-            cmd, note = fetch_args(args)
+                entry.update(kind="login", message="skipped: the last login failed")
+                failures.append(("login", f"{name(card)}Skipped: the last login failed. " + ADVICE["login"]))
+                continue
+            cmd, note = fetch_args(card, args.env)
             if note:
                 print(f"Go card history: {note}")
             code, out, err = run_step("fetch", cmd, log)
@@ -190,18 +210,32 @@ def _main(argv=None):
                     marker.write_text(f"{started}\n{err.strip()}\n")
                 last = (err.strip().splitlines() or ["unknown error"])[-1].rstrip()
                 last += "" if last.endswith((".", "!", "?", ")")) else "."
-                return finish(fail("fetch", kind, f"{last} {ADVICE[kind]}"))
+                entry.update(kind=kind, message=last)
+                failures.append((kind, f"{name(card)}{last} {ADVICE[kind]}"))
+                continue
             marker.unlink(missing_ok=True)
             m = re.search(r"(\d+) new", out)
-            result["new_rows"] = int(m.group(1)) if m else None
+            entry.update(ok=True, new_rows=int(m.group(1)) if m else None)
+            fetched += 1
+        if failures and not fetched:  # nothing new to build from
+            kinds = {k for k, _ in failures}
+            return finish(fail("fetch", kinds.pop() if len(kinds) == 1 else "error", " ".join(msg for _, msg in failures)))
+        counts = [c["new_rows"] for c in result["cards"] if c["new_rows"] is not None]
+        result["new_rows"] = sum(counts) if counts else None
 
         # 3. dashboard
-        code, out, err = run_step("build", [SCRIPTS / "build.py", "--history", args.history], log)
+        histories = [c.history for c in tracked if c.history.exists()] or [args.history]
+        code, out, err = run_step("build", [SCRIPTS / "build.py", "--env", args.env,
+                                            *[a for h in histories for a in ("--history", h)]], log)
         if code:
             last = (err.strip().splitlines() or ["unknown error"])[-1]
             return finish(fail("build", "error", last))
 
         n = result["new_rows"]
+        if failures:  # some cards worked: the dashboard is rebuilt, but report the rest
+            kinds = {k for k, _ in failures}
+            return finish(fail("fetch", kinds.pop() if len(kinds) == 1 else "error",
+                               "Dashboard rebuilt, but: " + " ".join(msg for _, msg in failures)))
         result.update(ok=True, step="done",
                       message="Dashboard rebuilt" + ("" if n is None else f", {n} new row{'s' if n != 1 else ''}"))
         print(f"\n{result['message']}. Open dashboard/index.html (or: make serve).")
