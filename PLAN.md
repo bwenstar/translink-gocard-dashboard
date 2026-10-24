@@ -154,6 +154,10 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] Notifications on failure (notify-send / osascript, plus `--notify-cmd` /
       `GOCARD_NOTIFY_CMD` for phone alerts). Failure kinds: login / site-changed / network / error.
       After a failed login, automatic runs pause until `.env` changes (or `--force`).
+- [x] Always-on deployment (a Raspberry Pi on the home network): weekly cron update and
+      `scripts/serve.py` as a systemd service, password-protected (HTTP Basic, refuses
+      non-localhost without a password), LAN/VPN only. Pi 3: build ~4 s; cold route cache
+      ~100 s / 166 MB. Docker not used (32-bit Pi 3, 1 GB).
 - [x] `make serve`, a local web server for the dashboard. The privacy-scrubbed public version is
       covered by the fictional-data demo on GitHub Pages.
 

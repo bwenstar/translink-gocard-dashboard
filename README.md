@@ -245,6 +245,67 @@ python3 scripts/update.py --notify-cmd 'curl -s -d "$GOCARD_MESSAGE" ntfy.sh/you
 The command gets `GOCARD_STATUS` (`ok`/`failed`), `GOCARD_KIND` and `GOCARD_MESSAGE`. Add
 `--notify-success` to hear about successful runs too.
 
+### Run it on an always-on machine (Raspberry Pi, home server)
+
+A desktop isn't on all the time, so a small always-on machine can do the weekly download and
+serve the dashboard to your other devices. Your data stays on that machine; nothing goes online.
+It's tested on a Raspberry Pi 3 (1 GB, 32-bit Raspberry Pi OS). There, a build takes about
+4 seconds, and the monthly timetable refresh (which recomputes route paths) about 100 seconds
+using under 200 MB of memory. Docker isn't needed; the system Python and `python3-requests`
+are enough.
+
+1. **Copy it over.** Clone the repo on the machine. Then copy `.env` (and `chmod 600` it) and,
+   if you already have them, `data/history.csv`, `data/stops.json` and `data/gtfs/`, using
+   `scp` or `rsync` over your own network. Without them, the first `make update` downloads
+   everything.
+2. **Set a dashboard password** in that machine's `.env`:
+
+   ```ini
+   DASHBOARD_USER=gocard
+   DASHBOARD_PASSWORD=<something long and random>
+   ```
+
+3. **Schedule the update** with `crontab -e`:
+
+   ```cron
+   10 7 * * 1 cd /path/to/repo && /usr/bin/python3 scripts/update.py --no-desktop >> data/cron.log 2>&1
+   ```
+
+4. **Serve the dashboard** with a systemd service. Put this in
+   `/etc/systemd/system/gocard-dashboard.service`, then run
+   `sudo systemctl enable --now gocard-dashboard`:
+
+   ```ini
+   [Unit]
+   Description=go card travel dashboard
+   After=network-online.target
+   Wants=network-online.target
+
+   [Service]
+   User=<you>
+   WorkingDirectory=/path/to/repo
+   ExecStart=/usr/bin/python3 scripts/serve.py --host 0.0.0.0 --port 8765
+   Restart=on-failure
+   NoNewPrivileges=true
+   ProtectSystem=strict
+   ProtectHome=read-only
+   PrivateTmp=true
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   Then open `http://<machine>:8765/` from any device on your network. The browser asks for the
+   dashboard user and password.
+
+`scripts/serve.py` refuses to listen beyond localhost without `DASHBOARD_PASSWORD`, never lists
+directories, and only serves `dashboard/`. **Keep the port private:** use your home network or a
+VPN like Tailscale, and don't port-forward it or put it behind Tailscale Funnel or similar, which
+would publish your travel history. The password is sent with every request over plain HTTP, which
+is fine on your own network but not over the internet.
+
+To update the code later: `git pull`, then `sudo systemctl restart gocard-dashboard`.
+
 ### Other shortcuts
 
 | Command | Does |
@@ -375,7 +436,9 @@ grep -rnE "https?://|requests\.|urlopen" scripts dashboard
 | dashboard (browser) | `unpkg.com` | nothing personal | the Leaflet map library, pinned with integrity hashes |
 | dashboard (browser) | `server.arcgisonline.com` (Esri) | which map tiles to draw | background map |
 
-Your trip data (`data.js`) is read by the browser from disk and never leaves your computer.
+Your trip data (`data.js`) is read by the browser from disk and never leaves your computer. If
+you run `scripts/serve.py` on a home server, it goes only to browsers on your network that have
+the dashboard password (see [Run it on an always-on machine](#run-it-on-an-always-on-machine-raspberry-pi-home-server)).
 The one thing worth knowing: map tile requests reveal to Esri which area you're looking at, like
 any web map. `build.py`, `history.py` and `routes.py` make no network requests.
 
@@ -391,7 +454,7 @@ These files are personal and are gitignored. Don't commit them:
 | `dashboard/data.js` | all of the above, compiled |
 | `data/gtfs/paths_cache.json` | the stop pairs you travel between |
 | `data/site-snapshots/` | raw go card online pages, including your card details and balance |
-| `data/update.log`, `data/last-update.json` | what each update did, including the last 4 digits of your card |
+| `data/update.log`, `data/last-update.json`, `data/cron.log` | what each update did, including the last 4 digits of your card |
 
 Before pushing a fork, check `git status` and
 `git log --all --name-only --format= | grep -v '^examples/' | grep -E "\.csv$|\.env$|data\.js$|stops\.json$"`.
@@ -416,6 +479,7 @@ them on every push (Python 3.10 and 3.14).
 | `test_build.py` | Times, stop-name tokens, stop matching from scratch (picks the right one of two same-named streets), stop modes, and a full build on the fake feed |
 | `test_parsing.py`, `test_history.py` | Every CSV row type, money formats, merging and de-duplicating downloads, master file ordering |
 | `test_make_example.py` | The example generator: real-looking CSV, consistent balances, same output for the same seed |
+| `test_serve.py` | The dashboard server: the right user and password are needed, it won't serve on the network without a password, never lists directories, and can't be tricked into serving files outside `dashboard/` |
 | `test_update.py` | `make update`: step order, first runs, the timetable refresh. A failed login pauses later runs until `.env` changes. Failure kinds match fetch_history's real messages, crashes are still notified, only one run at a time, the notify command and the timer units. |
 
 The safety rules are checked against deliberate breakage. Disabling any one of them (the login-form

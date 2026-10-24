@@ -16,6 +16,7 @@ data/history.csv
 data/site-snapshots/
 # update.py state (log, status, lock, paused-after-failed-login marker)
 data/update.log
+data/cron.log
 data/last-update.json
 data/.update.lock
 data/.login-failed
