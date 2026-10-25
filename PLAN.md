@@ -137,7 +137,7 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
 - [x] Every run checks the login form before sending credentials and the CSV header of every download
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
-- [x] `tests/` (130 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
+- [x] `tests/` (134 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
       fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
       full build), history, make_example; GitHub Actions on push (Python 3.10 + 3.14; 3.9 is no longer offered on the Ubuntu 26.04 runners). Each safety rule was verified by
       breaking it on purpose (the test must fail).
@@ -216,10 +216,12 @@ and the catch. Tick them off, or move them into a phase, as they land.
 - [x] **Rotate `data/cron.log` and `data/update.log`.** `update.py` trims each one to its newest
       half once it passes `--log-max-kb` (1 MB). It's rewritten in place, so cron's `>>` keeps
       appending correctly, and `update.log` is cut at a run boundary.
-- [ ] **Close the timetable-comparison gap at feed changes.** `update.py` refreshes the GTFS feed
-      *before* fetching trips, so rides from the last days of an old feed can be downloaded only
-      after a new feed (starting later) has replaced it, and then are never compared. Fix: build
-      with the old feed first, or keep the previous feed until its window has been compared.
+- [x] **Close the timetable-comparison gap at feed changes.** `update.py` used to refresh the GTFS
+      feed *before* fetching trips, so rides from an old feed's last days arrived only after it
+      was replaced, and were never compared. Now it fetches first and, when the feed is due and
+      there are new trips, builds once with the outgoing feed (saving their checks) before
+      replacing it. Also fixed: the new-row count read the first date window's "N new", not the
+      total. Still a gap if the machine is off for longer than a feed's window.
 - [ ] **Failed touch-off helper.** List recent failed touch-offs with the likely tap-off stop
       (from the return trip or usual pattern) and the fare difference, so it's quick to request
       an adjustment from Translink. It's real money: a failed touch-off is charged as a penalty fare.

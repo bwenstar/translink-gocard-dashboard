@@ -96,15 +96,52 @@ class Update(unittest.TestCase):
     def test_stale_or_missing_timetable_is_refreshed(self):
         old = time.time() - 40 * 86400
         os.utime(self.gtfs, (old, old))
+        steps = FakeSteps(fetch=(0, "Downloaded 3 rows: 0 new, 0 updated.\n", ""))
+        self.run_update(steps)
+        self.assertEqual(steps.names(), ["fetch", "gtfs", "build"])  # no new trips: one build, new timetable
+        self.gtfs.unlink()
         steps = FakeSteps()
         self.run_update(steps)
-        self.assertEqual(steps.names(), ["gtfs", "fetch", "build"])
+        self.assertEqual(steps.names(), ["gtfs", "fetch", "build"])  # missing: needed before anything
+
+    def test_counts_new_rows_from_the_total_not_the_first_window(self):
+        windows = ("  01 Sep 2026 - 30 Sep 2026: 4 rows, 0 new, 0 updated\n"
+                   "  01 Oct 2026 - 24 Oct 2026: 9 rows, 6 new, 1 updated\n"
+                   "Downloaded 13 rows: 6 new, 1 updated. 99 rows in history.csv\n")
+        self.assertEqual(update.new_rows(windows), 6)
+        self.assertEqual(update.new_rows("  a.csv: 2 new, 0 updated\n  b.csv: 3 new, 0 updated\n"), 5)
+        self.assertIsNone(update.new_rows("nothing useful"))
+
+    def test_new_trips_are_built_with_the_outgoing_timetable_first(self):
+        old = time.time() - 40 * 86400
+        os.utime(self.gtfs, (old, old))
+        steps = FakeSteps(fetch=(0, "Downloaded 5 rows: 2 new, 0 updated.\n", ""))
+        code, _ = self.run_update(steps)
+        self.assertEqual((code, steps.names()), (0, ["fetch", "build", "gtfs", "build"]))
 
     def test_timetable_refresh_failure_carries_on_with_the_old_one(self):
         old = time.time() - 40 * 86400
         os.utime(self.gtfs, (old, old))
         code, _ = self.run_update(FakeSteps(gtfs=(1, "", "timeout")))
         self.assertEqual(code, 0)
+        steps = FakeSteps(fetch=(0, "Downloaded 5 rows: 2 new, 0 updated.\n", ""), gtfs=(1, "", "timeout"))
+        code, out = self.run_update(steps)
+        self.assertEqual((code, steps.names()), (0, ["fetch", "build", "gtfs"]))  # already built with it
+        self.assertIn("carrying on with the old one", out)
+
+    def test_failed_build_with_the_outgoing_timetable_keeps_it(self):
+        old = time.time() - 40 * 86400
+        os.utime(self.gtfs, (old, old))
+        steps = FakeSteps(fetch=(0, "Downloaded 5 rows: 2 new, 0 updated.\n", ""), build=(1, "", "boom\n"))
+        code, _ = self.run_update(steps)
+        self.assertEqual((code, steps.names(), self.status["step"]), (1, ["fetch", "build"], "build"))
+
+    def test_timetable_is_refreshed_even_when_the_download_fails(self):
+        old = time.time() - 40 * 86400
+        os.utime(self.gtfs, (old, old))
+        steps = FakeSteps(fetch=(1, "", "Couldn't reach go card online\n"))
+        code, _ = self.run_update(steps)
+        self.assertEqual((code, steps.names()), (1, ["fetch", "gtfs"]))
 
     def test_no_timetable_at_all_is_fatal(self):
         self.gtfs.unlink()

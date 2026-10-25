@@ -232,8 +232,10 @@ make update          # or: python3 scripts/update.py
 ```
 
 One command does it all:
-1. refreshes Translink's timetable if it's more than 30 days old;
-2. downloads new trips (from a week before your newest one);
+1. downloads new trips (from a week before your newest one);
+2. refreshes Translink's timetable if it's more than 30 days old. If there are new trips, it first
+   builds once with the old timetable, so rides from its last days are still compared with the
+   timetable they were ridden under (see [How it works](#how-it-works));
 3. rebuilds the dashboard.
 
 On a first run it imports `data/raw/` if you have exports there, or downloads your whole history.

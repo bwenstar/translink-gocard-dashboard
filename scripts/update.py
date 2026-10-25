@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Bring everything up to date in one go. This is what `make update` and the weekly timer run.
 
-  1. refresh Translink's timetable (fetch_gtfs.py) if it's older than --gtfs-days
+  1. download Translink's timetable (fetch_gtfs.py) if there isn't one yet
   2. download new go card trips (fetch_history.py). On a first run it imports data/raw/
      if you have exports there, otherwise it downloads the whole history (--all).
-  3. rebuild the dashboard (build.py)
+  3. if the timetable is older than --gtfs-days, replace it, after a build with the old one
+     when there are new trips, so they're compared with the timetable they were ridden under
+  4. rebuild the dashboard (build.py)
 
 Every run appends to data/update.log and writes data/last-update.json, plus a copy for
 the dashboard header (dashboard/status.js), so a failed run shows there even though the
@@ -142,6 +144,14 @@ def trim_log(path, max_bytes, marker="\n"):
         f.truncate()
 
 
+def new_rows(out):
+    """New rows from fetch_history.py's output: its total line, else the sum of an import's per-file
+    lines. Downloads also print a line per date window, so the first "N new" isn't the total."""
+    m = re.search(r"Downloaded \d+ rows: (\d+) new", out)
+    found = [m.group(1)] if m else re.findall(r"(\d+) new", out)
+    return sum(map(int, found)) if found else None
+
+
 def write_dashboard_status(path, result):
     """The last run's outcome for the dashboard header. Messages and card labels only, no trips."""
     keep = ("started", "finished", "ok", "step", "kind", "message", "new_rows")
@@ -208,15 +218,14 @@ def _main(argv=None):
             log.write(f"=== {'ok' if result['ok'] else 'FAILED'}: {result['message']}\n")
             return code
 
-        # 1. timetable
+        # 1. timetable: download now if there's none; a stale one is replaced after the trips (below)
         zip_age = (time.time() - args.gtfs_zip.stat().st_mtime) / 86400 if args.gtfs_zip.exists() else None
-        if zip_age is None or zip_age > args.gtfs_days:
-            print(f"Refreshing Translink's timetable ({'missing' if zip_age is None else f'{zip_age:.0f} days old'})...")
+        refresh = zip_age is not None and zip_age > args.gtfs_days
+        if zip_age is None:
+            print("Downloading Translink's timetable (missing)...")
             code, _, err = run_step("gtfs", [SCRIPTS / "fetch_gtfs.py"], log)
-            if code and not args.gtfs_zip.exists():
-                return finish(fail("gtfs", "network", "Couldn't download Translink's timetable (needed once)."))
             if code:
-                print("  Couldn't refresh the timetable; carrying on with the old one.")
+                return finish(fail("gtfs", "network", "Couldn't download Translink's timetable (needed once)."))
 
         # 2. go card history, one card at a time (each has its own login and its own pause)
         tracked = cards.configured(cards.read_env(args.env), args.history.parent)
@@ -252,19 +261,37 @@ def _main(argv=None):
                 failures.append((kind, f"{name(card)}{last} {ADVICE[kind]}"))
                 continue
             marker.unlink(missing_ok=True)
-            m = re.search(r"(\d+) new", out)
-            entry.update(ok=True, new_rows=int(m.group(1)) if m else None)
+            entry.update(ok=True, new_rows=new_rows(out))
             fetched += 1
+        counts = [c["new_rows"] for c in result["cards"] if c["new_rows"] is not None]
+        result["new_rows"] = sum(counts) if counts else None
+        histories = [c.history for c in tracked if c.history.exists()] or [args.history]
+        build = lambda: run_step("build", [SCRIPTS / "build.py", "--env", args.env,
+                                           *[a for h in histories for a in ("--history", h)]], log)
+        code = built = None
+
+        # 3. replace a stale timetable. Rides are only compared with the timetable in force when
+        # they were taken, so new rides get a build with the outgoing one first (build.py keeps
+        # those results in data/timetable-checks.json); otherwise rides from its last days would
+        # arrive only after it's gone and never be compared.
+        if refresh:
+            if fetched and result["new_rows"] != 0:
+                print("Comparing the new rides with the outgoing timetable...")
+                code, out, err = build()
+                built = not code
+            if not code:
+                print(f"Refreshing Translink's timetable ({zip_age:.0f} days old)...")
+                if run_step("gtfs", [SCRIPTS / "fetch_gtfs.py"], log)[0]:
+                    print("  Couldn't refresh the timetable; carrying on with the old one.")
+                else:
+                    built = False
         if failures and not fetched:  # nothing new to build from
             kinds = {k for k, _ in failures}
             return finish(fail("fetch", kinds.pop() if len(kinds) == 1 else "error", " ".join(msg for _, msg in failures)))
-        counts = [c["new_rows"] for c in result["cards"] if c["new_rows"] is not None]
-        result["new_rows"] = sum(counts) if counts else None
 
-        # 3. dashboard
-        histories = [c.history for c in tracked if c.history.exists()] or [args.history]
-        code, out, err = run_step("build", [SCRIPTS / "build.py", "--env", args.env,
-                                            *[a for h in histories for a in ("--history", h)]], log)
+        # 4. dashboard
+        if not built and not code:
+            code, out, err = build()
         if code:
             last = (err.strip().splitlines() or ["unknown error"])[-1]
             return finish(fail("build", "error", last))
