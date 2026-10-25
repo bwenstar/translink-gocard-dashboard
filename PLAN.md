@@ -18,6 +18,7 @@ user-visible change (commands, flags, layout, features, limitations).
 .env                      # USERNAME / PASSWORD for the go card site (never committed)
 README.md                 # user-facing docs, kept in sync with every change
 PLAN.md                   # this file
+LICENSE                   # MIT
 requirements.txt, .env.example
 data/
   history.csv             # MASTER: every trip ever downloaded, same columns as an export (gitignored)
@@ -198,9 +199,8 @@ and the catch. Tick them off, or move them into a phase, as they land.
 
 ### Next up: small and clearly worth it
 
-- [ ] **Choose a licence.** The repo has no `LICENSE`, so legally nobody may reuse or fork it
-      yet. MIT is the usual pick for a small tool like this. This is the owner's decision; then
-      add `LICENSE` and a line in the README.
+- [x] **Choose a licence.** MIT (`LICENSE`), with a Licence section in the README noting that
+      Translink's GTFS data isn't covered.
 - [ ] **Back up the always-on machine's data.** Once the Pi does the downloading it holds the only
       up-to-date copy of `data/`, and SD cards fail. A weekly encrypted archive (`tar` + `age` or
       `gpg`) copied to another machine or USB stick, or `rsync` pulled from the desktop whenever

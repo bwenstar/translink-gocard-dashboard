@@ -618,9 +618,14 @@ whatever replaces it and use `--import`. Everything you've already downloaded st
 ## Roadmap
 
 See [PLAN.md](PLAN.md#future-work) for the full list. Next up:
-- a licence, backups of the always-on machine's data, and update health on the dashboard
+- backups of the always-on machine's data, and phone alerts from it
 - real departure punctuality from Translink's public live feeds
 - historical timetables, so old trips match the network as it was
+
+## Licence
+
+[MIT](LICENSE). Translink's timetable (GTFS) data, which the scripts download when they run, isn't
+part of this repo or covered by this licence; it comes under Translink's own terms.
 
 ## Disclaimer
 
