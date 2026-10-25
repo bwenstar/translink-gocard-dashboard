@@ -241,6 +241,8 @@ Each run appends to `data/update.log` and writes `data/last-update.json` (when, 
 how many new rows). It also writes `dashboard/status.js`, so the dashboard header says "updated 3 days
 ago". A red banner appears when the last run failed (even though that run didn't rebuild the dashboard)
 or when there's been no update for more than 10 days.
+Once `data/update.log` or `data/cron.log` grows past 1 MB, the next run cuts it down to its newest
+half, starting at a run boundary, so the logs can't fill a small SD card (`--log-max-kb` to change it).
 
 ### Run it weekly
 

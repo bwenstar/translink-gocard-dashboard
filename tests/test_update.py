@@ -73,6 +73,26 @@ class Update(unittest.TestCase):
         self.assertIn("next run will try again", self.dashboard_status["message"])
         self.assertEqual(set(self.dashboard_status["cards"][0]), {"card", "label", "ok", "kind"})
 
+    def test_logs_are_trimmed_to_their_newest_runs(self):
+        log, cron = self.dir / "update.log", self.dir / "cron.log"
+        log.write_text("".join(f"\n=== run {i} ===\n" + "x" * 100 + "\n" for i in range(50)))
+        cron.write_text("".join(f"line {i}\n" for i in range(1000)))
+        self.run_update(FakeSteps(), "--log-max-kb", "2")
+        text = log.read_text()
+        self.assertTrue(text.startswith("=== run "))              # starts at a run, not mid-line
+        self.assertIn("=== run 49 ===", text)
+        self.assertNotIn("=== run 0 ===", text)
+        self.assertIn("=== ok", text)                             # this run is logged after the trim
+        lines = cron.read_text().splitlines()
+        self.assertEqual(lines[-1], "line 999")
+        self.assertTrue(lines[0].startswith("line ") and len(lines) < 1000)
+        self.assertLess(cron.stat().st_size, 2048)
+
+    def test_small_logs_are_left_alone(self):
+        (self.dir / "cron.log").write_text("hello\n")
+        self.run_update(FakeSteps())
+        self.assertEqual((self.dir / "cron.log").read_text(), "hello\n")
+
     def test_stale_or_missing_timetable_is_refreshed(self):
         old = time.time() - 40 * 86400
         os.utime(self.gtfs, (old, old))

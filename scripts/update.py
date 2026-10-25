@@ -8,7 +8,8 @@
 
 Every run appends to data/update.log and writes data/last-update.json, plus a copy for
 the dashboard header (dashboard/status.js), so a failed run shows there even though the
-dashboard wasn't rebuilt. On failure it
+dashboard wasn't rebuilt. update.log and cron.log (the README's cron line) are trimmed to
+their newest runs once they pass --log-max-kb, so they can't fill a small SD card. On failure it
 exits non-zero and sends a desktop notification (notify-send on Linux, osascript on
 macOS), plus --notify-cmd if you give one, e.g. to get a phone alert:
 
@@ -122,6 +123,25 @@ def fetch_args(card, env):
     return [SCRIPTS / "fetch_history.py", *common, "--all"], "downloading the whole history (first run)"
 
 
+def trim_log(path, max_bytes, marker="\n"):
+    """Once a log passes max_bytes, keep about its newest half, starting at a marker (a run's
+    header, or a line). Rewritten in place, so an append-mode writer such as cron's >> keeps working."""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return
+    if size <= max_bytes:
+        return
+    with open(path, "r+b") as f:
+        f.seek(size - max_bytes // 2)
+        tail = f.read()
+        cut = tail.find(marker.encode())
+        tail = tail[cut + 1:] if cut >= 0 else b""
+        f.seek(0)
+        f.write(tail)
+        f.truncate()
+
+
 def write_dashboard_status(path, result):
     """The last run's outcome for the dashboard header. Messages and card labels only, no trips."""
     keep = ("started", "finished", "ok", "step", "kind", "message", "new_rows")
@@ -154,6 +174,8 @@ def _main(argv=None):
     ap.add_argument("--env", type=pathlib.Path, default=ROOT / ".env")
     ap.add_argument("--gtfs-zip", type=pathlib.Path, default=ROOT / "data" / "gtfs" / "SEQ_GTFS.zip")
     ap.add_argument("--state", type=pathlib.Path, default=ROOT / "data", help="where the log and status files go")
+    ap.add_argument("--log-max-kb", type=int, default=1024,
+                    help="trim update.log and cron.log to their newest runs past this size (default 1024)")
     ap.add_argument("--status-js", type=pathlib.Path, default=ROOT / "dashboard" / "status.js",
                     help="the last run's outcome for the dashboard header (default: dashboard/status.js)")
     args = ap.parse_args(argv)
@@ -169,6 +191,8 @@ def _main(argv=None):
         if not mine:
             print("Another update is already running; nothing to do.")
             return 0
+        trim_log(state / "update.log", args.log_max_kb * 1024, marker="\n=== ")
+        trim_log(state / "cron.log", args.log_max_kb * 1024)
         log.write(f"\n=== {started} ===\n")
 
         def fail(step, kind, message):

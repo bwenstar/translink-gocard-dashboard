@@ -137,7 +137,7 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
 - [x] Every run checks the login form before sending credentials and the CSV header of every download
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
-- [x] `tests/` (128 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
+- [x] `tests/` (130 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
       fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
       full build), history, make_example; GitHub Actions on push (Python 3.10 + 3.14; 3.9 is no longer offered on the Ubuntu 26.04 runners). Each safety rule was verified by
       breaking it on purpose (the test must fail).
@@ -213,8 +213,9 @@ and the catch. Tick them off, or move them into a phase, as they land.
       private random topic) or email in the cron line. Messages say what failed, never trip data.
 - [ ] **Run `--check-site` monthly from cron** with the same alert, so a change to Translink's site
       is noticed before the weekly download breaks.
-- [ ] **Rotate `data/cron.log` and `data/update.log`** (logrotate, or `update.py` keeping the last
-      N runs). They grow forever on a small SD card.
+- [x] **Rotate `data/cron.log` and `data/update.log`.** `update.py` trims each one to its newest
+      half once it passes `--log-max-kb` (1 MB). It's rewritten in place, so cron's `>>` keeps
+      appending correctly, and `update.log` is cut at a run boundary.
 - [ ] **Close the timetable-comparison gap at feed changes.** `update.py` refreshes the GTFS feed
       *before* fetching trips, so rides from the last days of an old feed can be downloaded only
       after a new feed (starting later) has replaced it, and then are never compared. Fix: build
