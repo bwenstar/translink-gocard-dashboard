@@ -919,6 +919,31 @@
   }
 
   // ---------- table ----------
+  // Failed touch-offs are charged a penalty fare. List them with the likely tap-off stop and the
+  // usual fare (both guessed by build.py), so asking Translink for an adjustment is quick.
+  function renderFailed(rows) {
+    const failed = rows.filter((l) => l.failedTouchOff).sort((a, b) => b.onD - a.onD);
+    $("#failedCard").hidden = !failed.length;
+    if (!failed.length) return;
+    const diff = (l) => (l.usualFare == null ? null : Math.max(0, l.fare - l.usualFare));
+    const total = failed.reduce((s, l) => s + (diff(l) ?? 0), 0);
+    $("#failed .card-col").hidden = !MULTI;
+    $("#failed tbody").replaceChildren(...failed.map((l) => {
+      const to = el("td", { class: "stop" }, l.likelyTo ? stopName(l.likelyTo) : el("span", { class: "muted", text: "no good guess" }));
+      if (l.likelyWhy) to.append(el("div", { class: "muted", text: l.likelyWhy }));
+      const tr = el("tr");
+      if (MULTI) tr.append(el("td", { text: cardLabel(l.card) }));
+      tr.append(el("td", { text: fmtDate(l.onD) }), el("td", { text: onTime(l) }),
+        el("td", { class: "stop", text: stopName(l.from) }), to,
+        el("td", { class: "num", text: money(l.fare) }), el("td", { class: "num", text: l.usualFare == null ? "" : money(l.usualFare) }),
+        el("td", { class: "num", text: diff(l) == null ? "" : money(diff(l)) }));
+      return tr;
+    }));
+    $("#failedNote").textContent = `${plural(failed.length, "failed touch-off")}, about ${money(total)} more than the usual fares. ` +
+      "You can ask Translink to adjust a penalty fare to what the trip should have cost. The tap-off stop and usual fare are " +
+      "guesses from your other trips, so check them before you ask.";
+  }
+
   function renderTable(rows) {
     const k = state.sort.k, dir = state.sort.asc ? 1 : -1;
     const val = (l) => (k === "card" ? cardLabel(l.card) : k === "on" ? +l.onD : k === "onT" ? hm(l.onD) : k === "offT" ? hm(l.offD)
@@ -960,11 +985,11 @@
   }));
 
   function downloadCsv() {
-    const cols = [...(MULTI ? ["card"] : []), "date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "timetabled_minutes", "vs_timetable", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "journey"];
+    const cols = [...(MULTI ? ["card"] : []), "date", "tap_on", "tap_off", "mode", "route", "route_name", "from", "to", "minutes", "timetabled_minutes", "vs_timetable", "km", "km_straight_line", "fare", "balance", "transfer", "failed_touch_off", "likely_tap_off", "usual_fare", "journey"];
     const q = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
     const lines = [cols.join(",")].concat(filtered().map((l) => [
       ...(MULTI ? [cardLabel(l.card)] : []), ymd(l.onD), l.timeUnknown ? "" : hm(l.onD), hm(l.offD), l.mode, l.route, l.routeName, l.from, l.to, l.mins, l.schedMins, l.vsTimetable, l.km, l.kmApprox ? 1 : 0,
-      l.fare.toFixed(2), l.balance, l.transfer ? 1 : 0, l.failedTouchOff ? 1 : 0, l.journey,
+      l.fare.toFixed(2), l.balance, l.transfer ? 1 : 0, l.failedTouchOff ? 1 : 0, l.likelyTo, l.usualFare?.toFixed(2), l.journey,
     ].map(q).join(",")));
     const a = el("a", { href: URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" })), download: `go-card-trips-${state.from}-to-${state.to}.csv` });
     document.body.append(a); a.click(); a.remove();
@@ -990,6 +1015,7 @@
     renderDurations(rows);
     renderVsTimetable(rows);
     renderSpend(rows);
+    renderFailed(rows);
     renderBalance();
     renderTable(rows);
     writeHash();

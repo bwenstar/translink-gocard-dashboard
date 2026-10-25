@@ -23,6 +23,59 @@ class Times(unittest.TestCase):
             self.assertIsNone(build.parse_time(d, s))
 
 
+def leg(on, frm, to, fare=0.5, journey=None, transfer=False, card=1):
+    return {"on": on, "from": frm, "to": None if to == "FAILED" else to, "fare": 5.0 if to == "FAILED" else fare,
+            "failedTouchOff": to == "FAILED", "transfer": transfer, "journey": journey, "card": card}
+
+
+class FailedTouchOffs(unittest.TestCase):
+    def guess(self, legs, where=None):
+        for i, l in enumerate(legs):
+            l["journey"] = l["journey"] if l["journey"] is not None else i
+        build.guess_failed_touch_offs(legs, where or (lambda n: None))
+        return next(l for l in legs if l["failedTouchOff"])
+
+    def test_usual_destination_around_that_time(self):
+        legs = [leg(f"2026-01-0{d}T17:30", "A", "Home", fare=0.5) for d in range(1, 4)]
+        legs += [leg("2026-01-04T09:00", "A", "Gym"), leg("2026-01-05T17:40", "A", "FAILED")]
+        f = self.guess(legs)
+        self.assertEqual((f["likelyTo"], f["usualFare"]), ("Home", 0.5))
+        self.assertIn("3 of your 3 trips from here around this time", f["likelyWhy"])
+
+    def test_next_leg_of_the_same_journey_wins(self):
+        legs = [leg(f"2026-01-0{d}T17:30", "A", "Home") for d in range(1, 4)]
+        legs += [leg("2026-01-05T17:40", "A", "FAILED", journey=9), leg("2026-01-05T18:00", "Hub", "Home", journey=9, transfer=True)]
+        self.assertEqual(self.guess(legs)["likelyTo"], "Hub")
+
+    def test_next_tap_on_when_there_is_no_pattern(self):
+        legs = [leg("2026-01-05T17:40", "A", "FAILED"), leg("2026-01-06T08:00", "Home", "A")]
+        f = self.guess(legs)
+        self.assertEqual((f["likelyTo"], f["likelyWhy"]), ("Home", "where you next tapped on"))
+        legs = [leg("2026-01-05T17:40", "A", "FAILED"), leg("2026-01-08T08:00", "Home", "A")]  # days later: no
+        self.assertNotIn("likelyTo", self.guess(legs))
+
+    def test_a_stop_near_the_tap_on_is_not_a_destination(self):
+        where = {"A": (-27.0, 153.0), "A opposite": (-27.0005, 153.0), "Home": (-27.1, 153.1)}.get
+        legs = [leg("2026-01-05T17:40", "A", "FAILED"), leg("2026-01-05T19:00", "A opposite", "Home")]
+        self.assertNotIn("likelyTo", self.guess(legs, where))
+
+    def test_other_cards_are_ignored(self):
+        legs = [leg(f"2026-01-0{d}T17:30", "A", "Elsewhere", card=2) for d in range(1, 4)]
+        legs += [leg("2026-01-05T17:40", "A", "FAILED")]
+        self.assertNotIn("likelyTo", self.guess(legs))
+
+    def test_usual_fare(self):
+        legs = [leg("2025-01-01T17:30", "A", "Home", fare=3.0), leg("2025-01-02T17:30", "A", "Home", fare=3.2),
+                leg("2025-01-03T17:30", "A", "FAILED")]
+        self.assertEqual(self.guess(legs)["usualFare"], 3.2)              # median of the same trip
+        legs = [leg("2025-01-01T17:30", "B", "C", fare=1.0), leg("2025-01-02T17:30", "A", "FAILED"),
+                leg("2025-01-03T08:00", "Home", "A")]
+        self.assertEqual(self.guess(legs)["usualFare"], 1.0)              # else any recent paid trip
+        legs = [leg("2025-01-01T17:30", "B", "C", fare=1.0), leg("2025-01-02T17:30", "A", "FAILED", transfer=True),
+                leg("2025-01-03T08:00", "Home", "A")]
+        self.assertEqual(self.guess(legs)["usualFare"], 0.0)              # a transfer leg is free
+
+
 class StopNames(unittest.TestCase):
     def test_tokens(self):
         self.assertIn("38", build.norm_tokens("Gympie Rd f/s Hamilton Rd (St 38)"))

@@ -116,6 +116,17 @@
       <div id="spend" class="chart"></div>
     </article>
 
+    <article class="card span-2" id="failedCard" hidden>
+      <header><h2>Failed touch-offs</h2><p class="muted" id="failedNote"></p></header>
+      <div class="table-wrap"><table id="failed">
+        <thead><tr>
+          <th class="card-col" hidden>Card</th><th>Date</th><th>On</th><th>From</th><th>Likely tap-off</th>
+          <th class="num">Charged</th><th class="num" title="What this trip usually costs you">Usual</th><th class="num">Difference</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </article>
+
     <article class="card span-2">
       <header><h2>Ride time vs timetable</h2><p class="muted" id="vsNote">Your tap-on to tap-off time minus the timetabled time for the service you most likely caught. Above zero is slower than timetabled.</p></header>
       <div id="vsEmpty" hidden></div>

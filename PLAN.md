@@ -137,7 +137,7 @@ CSV columns: `Date,Time,From,Time,To,Fare,Credit,Balance` (note the duplicate `T
 - [x] `docs/site-contract.json`: login form, export, limits, CSV columns, row types (as of 2026-10-24)
 - [x] Every run checks the login form before sending credentials and the CSV header of every download
 - [x] `--check-site`: full check plus private raw snapshot in `data/site-snapshots/`
-- [x] `tests/` (134 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
+- [x] `tests/` (140 tests, no network; `tests/fakes.py` = synthetic GTFS feed + fake go card site):
       fetch_history (credentials, windows, login/export safety, full runs), routes, build (incl. a
       full build), history, make_example; GitHub Actions on push (Python 3.10 + 3.14; 3.9 is no longer offered on the Ubuntu 26.04 runners). Each safety rule was verified by
       breaking it on purpose (the test must fail).
@@ -222,9 +222,11 @@ and the catch. Tick them off, or move them into a phase, as they land.
       there are new trips, builds once with the outgoing feed (saving their checks) before
       replacing it. Also fixed: the new-row count read the first date window's "N new", not the
       total. Still a gap if the machine is off for longer than a feed's window.
-- [ ] **Failed touch-off helper.** List recent failed touch-offs with the likely tap-off stop
-      (from the return trip or usual pattern) and the fare difference, so it's quick to request
-      an adjustment from Translink. It's real money: a failed touch-off is charged as a penalty fare.
+- [x] **Failed touch-off helper.** A dashboard card lists failed touch-offs with the likely
+      tap-off stop, why it was picked (the journey's next leg, the usual destination at that time,
+      the next tap-on within 18 h, or the usual destination at any time; never a stop within 300 m
+      of the tap-on), the penalty charged, the usual fare and the difference. Also in the CSV
+      export. Guessed in `build.py` (`guess_failed_touch_offs`), so it's unit-tested.
 
 ### Bigger features
 

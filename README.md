@@ -72,6 +72,8 @@ with fictional example data. Nothing to install.
     - trip durations, spending per month, card balance with top-ups
     - **ride time vs timetable**: how much longer or shorter your rides take than timetabled, by
       time of day and by route (see [How it works](#how-it-works) for what is and isn't measured)
+  - **failed touch-offs**: each one with the likely tap-off stop, why it was picked, the penalty
+    charged and what the trip usually costs, so it's quick to ask Translink for an adjustment
   - **filters**:
     - date range and presets, weekdays, mode, route number, time of day
     - trip type (with a transfer, failed touch-off, no route match, unverified stop)
@@ -420,6 +422,14 @@ A completed trip is never replaced by an open one.
 - failed touch-offs, including penalty rows with no time or stop
 
 Transfer legs are grouped into journeys.
+
+**Failed touch-offs.** For each one, `build.py` guesses where you got off, using the best evidence
+it has: the stop where the journey's next leg tapped on (a transfer); where that card usually goes
+from that stop around that time of day (at least 2 trips); where it next tapped on within 18 hours
+(usually the trip back); or where it usually goes from there at any time. A stop within 300 m of
+the tap-on is never the guess, because tapping on there next means you came back. The usual fare is
+the median fare of that same trip before, else of any paid trip in the previous 60 days, and a
+transfer leg is free. These are guesses: the dashboard shows why each was picked, so check it first.
 
 **Route paths.** For each tap-on/tap-off stop pair, `routes.py` searches the GTFS `stop_times.txt`
 for trips that call at the tap-on stop and later at the tap-off stop. Stops within 200 m also count,

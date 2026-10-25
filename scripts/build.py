@@ -186,6 +186,59 @@ def keep_timetable_checks(legs, path):
     return fresh
 
 
+def guess_failed_touch_offs(legs, where=lambda name: None):
+    """For each failed touch-off, the likely tap-off stop and what the trip usually costs, so
+    it's quick to ask Translink to adjust the penalty. Adds likelyTo, likelyWhy and usualFare.
+
+    The guess, best evidence first: the stop where the journey's next leg tapped on (a transfer);
+    where this card usually goes from this stop around that time of day (2+ trips); where it
+    next tapped on within 18 hours (the trip back, usually); where it usually goes at any time.
+    A stop within 300 m of the tap-on (where(name) gives (lat, lon)) is never the guess: tapping
+    on there next means you came back, not where you went.
+    """
+    def apart(a, b):
+        pa, pb = where(a), where(b)
+        return a != b if not (pa and pb) else km(pa, pb) > 0.3
+
+    ok = [l for l in legs if not l["failedTouchOff"] and l["from"] and l["to"]]
+    for i, l in enumerate(legs):
+        if not l["failedTouchOff"] or not l["from"]:
+            continue
+        on, card = dt.datetime.fromisoformat(l["on"]), l.get("card", 1)
+        later = [x for x in legs[i + 1:] if x.get("card", 1) == card and x["from"] and apart(x["from"], l["from"])]
+        nxt = later[0] if later and dt.datetime.fromisoformat(later[0]["on"]) - on <= dt.timedelta(hours=18) else None
+        mine = [x for x in ok if x.get("card", 1) == card and x["from"] == l["from"] and apart(x["to"], l["from"])]
+        near = [x for x in mine if abs(dt.datetime.fromisoformat(x["on"]).hour - on.hour) <= 2]
+
+        def usual(xs):
+            counts = {}
+            for x in xs:
+                counts[x["to"]] = counts.get(x["to"], 0) + 1
+            to = max(counts, key=lambda k: (counts[k], k)) if counts else None
+            return to, counts.get(to, 0), len(xs)
+
+        near_to, near_n, near_of = usual(near)
+        any_to, any_n, any_of = usual(mine)
+        if nxt and nxt["journey"] == l["journey"]:
+            guess, why = nxt["from"], "your next leg of this journey tapped on there"
+        elif near_n >= 2:
+            guess, why = near_to, f"{near_n} of your {near_of} trips from here around this time ended there"
+        elif nxt:
+            guess, why = nxt["from"], "where you next tapped on"
+        elif any_to:
+            guess, why = any_to, f"{any_n} of your {any_of} trips from here ended there"
+        else:
+            continue
+        # What that trip costs: the median fare of the same trip before this one, else of any paid trip
+        # in the previous 60 days. A transfer leg is free.
+        before = [x for x in ok if x["on"] < l["on"] and not x["transfer"]]
+        same = [x["fare"] for x in before if x["from"] == l["from"] and x["to"] == guess]
+        recent = [x["fare"] for x in before if on - dt.datetime.fromisoformat(x["on"]) <= dt.timedelta(days=60)]
+        fares = sorted(same or recent)
+        l["likelyTo"], l["likelyWhy"] = guess, why
+        l["usualFare"] = 0.0 if l["transfer"] else fares[len(fares) // 2] if fares else None
+
+
 def parse_legs(raw):
     """go card CSV rows -> (legs, topups), sorted, with transfer legs grouped into journeys."""
     legs, topups = [], []
@@ -311,6 +364,7 @@ def main():
                     "gtfs_name": g["stop_name"], "auto": bool(entry.get("auto"))}
     if missing:
         print("No coordinates for:", ", ".join(missing))
+    guess_failed_touch_offs(legs, lambda n: (stops[n]["lat"], stops[n]["lon"]) if n in stops else None)
 
     paths, net, feed = {}, {}, None
     if args.gtfs_zip.exists():
